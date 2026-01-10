@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuisine Server - Gestion de Recettes</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">👨‍🍳 Cuisine Server</h1>
+      <div class="nav-menu">
+        <button class="nav-btn active" data-view="plats">📖 Recettes</button>
+        <button class="nav-btn" data-view="calendrier">📅 Calendrier</button>
+        <button class="nav-btn" data-view="ingredients">🥕 Ingrédients</button>
+        <button class="nav-btn" data-view="favoris">⭐ Favoris</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Conteneur principal -->
+  <div class="container">
+    
+    <!-- Vue Recettes -->
+    <div class="view active" id="view-plats">
+      <div class="view-header">
+        <h2>📖 Mes Recettes</h2>
+        <div class="header-actions">
+          <input type="text" id="search-plats" placeholder="Rechercher une recette..." class="search-input">
+          <button class="btn-primary" id="btn-new-plat">➕ Nouvelle Recette</button>
+        </div>
+      </div>
+      <div id="plats-list" class="cards-grid"></div>
+    </div>
+
+    <!-- Vue Calendrier -->
+    <div class="view" id="view-calendrier">
+      <div class="view-header">
+        <h2>📅 Calendrier des Menus</h2>
+        <div class="header-actions">
+          <button class="btn-secondary" id="btn-prev-week">◀ Semaine précédente</button>
+          <span id="current-week" class="week-label"></span>
+          <button class="btn-secondary" id="btn-next-week">Semaine suivante ▶</button>
+        </div>
+      </div>
+      <div id="calendrier-grid" class="calendrier-container"></div>
+      <div class="liste-courses-section">
+        <h3>🛒 Liste de courses</h3>
+        <button class="btn-primary" id="btn-liste-courses">Générer la liste</button>
+        <div id="liste-courses-content"></div>
+      </div>
+    </div>
+
+    <!-- Vue Ingrédients -->
+    <div class="view" id="view-ingredients">
+      <div class="view-header">
+        <h2>🥕 Ingrédients</h2>
+        <div class="header-actions">
+          <input type="text" id="search-ingredients" placeholder="Rechercher un ingrédient..." class="search-input">
+          <button class="btn-primary" id="btn-new-ingredient">➕ Nouvel Ingrédient</button>
+        </div>
+      </div>
+      <div id="ingredients-list" class="table-container"></div>
+    </div>
+
+    <!-- Vue Favoris -->
+    <div class="view" id="view-favoris">
+      <div class="view-header">
+        <h2>⭐ Mes Recettes Favorites</h2>
+      </div>
+      <div id="favoris-list" class="cards-grid"></div>
+    </div>
+
+  </div>
+
+  <!-- Modal Plat -->
+  <div class="modal" id="modal-plat">
+    <div class="modal-content modal-large">
+      <span class="modal-close">&times;</span>
+      <h2 id="modal-plat-title">Nouvelle Recette</h2>
+      <form id="form-plat">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nom du plat *</label>
+            <input type="text" id="plat-nom" required>
+          </div>
+          <div class="form-group">
+            <label>Difficulté</label>
+            <select id="plat-difficulte">
+              <option>Facile</option>
+              <option>Moyen</option>
+              <option>Difficile</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Temps de préparation (min)</label>
+            <input type="number" id="plat-temps" min="0">
+          </div>
+          <div class="form-group">
+            <label>Nombre de personnes</label>
+            <input type="number" id="plat-personnes" value="4" min="1">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="plat-description" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Conseils du chef</label>
+          <textarea id="plat-conseils" rows="2"></textarea>
+        </div>
+
+        <!-- Section Ingrédients -->
+        <div class="form-section">
+          <h3>🥕 Ingrédients</h3>
+          <div id="plat-ingredients-list"></div>
+          <button type="button" class="btn-secondary" id="btn-add-ingredient">➕ Ajouter un ingrédient</button>
+        </div>
+
+        <!-- Section Préparation -->
+        <div class="form-section">
+          <h3>📝 Étapes de préparation</h3>
+          <div id="plat-preparations-list"></div>
+          <button type="button" class="btn-secondary" id="btn-add-preparation">➕ Ajouter une étape</button>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">💾 Enregistrer</button>
+          <button type="button" class="btn-secondary modal-close">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Ingrédient -->
+  <div class="modal" id="modal-ingredient">
+    <div class="modal-content">
+      <span class="modal-close">&times;</span>
+      <h2>Nouvel Ingrédient</h2>
+      <form id="form-ingredient">
+        <div class="form-group">
+          <label>Nom *</label>
+          <input type="text" id="ingredient-nom" required>
+        </div>
+        <div class="form-group">
+          <label>Unité de base</label>
+          <select id="ingredient-unite"></select>
+        </div>
+        <div class="form-group">
+          <label>Catégorie</label>
+          <select id="ingredient-categorie"></select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">💾 Enregistrer</button>
+          <button type="button" class="btn-secondary modal-close">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
