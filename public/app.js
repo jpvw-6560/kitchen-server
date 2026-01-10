@@ -12,6 +12,65 @@ const state = {
   editingPlat: null
 };
 
+/**
+ * Affiche un dialog de confirmation moderne
+ * @param {string} message - Le message à afficher
+ * @param {string} title - Le titre (optionnel, défaut: "Confirmation")
+ * @param {string} icon - L'icône à afficher (optionnel, défaut: "⚠️")
+ * @returns {Promise<boolean>} - true si confirmé, false sinon
+ */
+async function showConfirmDialog(message, title = 'Confirmation', icon = '⚠️') {
+  return new Promise((resolve) => {
+    // Créer l'overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-dialog-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-dialog-card">
+        <div class="confirm-dialog-icon">${icon}</div>
+        <h3 class="confirm-dialog-title">${title}</h3>
+        <p class="confirm-dialog-message">${message}</p>
+        <div class="confirm-dialog-actions">
+          <button class="confirm-dialog-btn confirm-dialog-btn-cancel">Annuler</button>
+          <button class="confirm-dialog-btn confirm-dialog-btn-confirm">Supprimer</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Gérer l'annulation
+    const cancelBtn = overlay.querySelector('.confirm-dialog-btn-cancel');
+    const confirmBtn = overlay.querySelector('.confirm-dialog-btn-confirm');
+    
+    const cleanup = (result) => {
+      overlay.style.animation = 'fadeOut 0.2s ease';
+      setTimeout(() => {
+        document.body.removeChild(overlay);
+        resolve(result);
+      }, 200);
+    };
+    
+    cancelBtn.addEventListener('click', () => cleanup(false));
+    confirmBtn.addEventListener('click', () => cleanup(true));
+    
+    // Fermer avec Escape
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        cleanup(false);
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    
+    // Fermer en cliquant sur l'overlay
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        cleanup(false);
+      }
+    });
+  });
+}
+
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
   await loadConfig();
@@ -241,7 +300,14 @@ async function toggleFavori(event, platId) {
 
 async function deletePlat(event, platId) {
   event.stopPropagation();
-  if (!confirm('Supprimer cette recette ?')) return;
+  
+  const confirmed = await showConfirmDialog(
+    'Cette action est irréversible. Tous les ingrédients et étapes de préparation seront également supprimés.',
+    'Supprimer cette recette ?',
+    '🗑️'
+  );
+  
+  if (!confirmed) return;
   
   try {
     await fetch(`${API_BASE}/plats/${platId}`, { method: 'DELETE' });
@@ -252,7 +318,13 @@ async function deletePlat(event, platId) {
 }
 
 async function deleteIngredient(ingredientId) {
-  if (!confirm('Supprimer cet ingrédient ?')) return;
+  const confirmed = await showConfirmDialog(
+    'Cet ingrédient sera supprimé de toutes les recettes qui l\'utilisent.',
+    'Supprimer cet ingrédient ?',
+    '🗑️'
+  );
+  
+  if (!confirmed) return;
   
   try {
     await fetch(`${API_BASE}/ingredients/${ingredientId}`, { method: 'DELETE' });
