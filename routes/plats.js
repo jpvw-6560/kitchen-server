@@ -18,9 +18,11 @@ router.delete('/:id', platController.deletePlat);
 // Routes pour les ingrédients d'un plat
 router.post('/:id/ingredients', platController.addIngredient);
 router.delete('/:id/ingredients/:ingredientId', platController.removeIngredient);
+router.delete('/:id/ingredients', platController.clearIngredients);
 
 // Routes pour les étapes de préparation
 router.post('/:id/preparations', platController.addPreparation);
 router.delete('/:id/preparations/:preparationId', platController.removePreparation);
+router.delete('/:id/preparations', platController.clearPreparations);
 
 module.exports = router;

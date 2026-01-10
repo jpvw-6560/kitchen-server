@@ -168,6 +168,32 @@ async function removePreparation(req, res) {
   }
 }
 
+/**
+ * Supprime tous les ingrédients d'un plat
+ */
+async function clearIngredients(req, res) {
+  try {
+    await Plat.clearIngredients(req.params.id);
+    res.json({ message: 'Ingrédients supprimés avec succès' });
+  } catch (err) {
+    console.error('Erreur clearIngredients:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * Supprime toutes les préparations d'un plat
+ */
+async function clearPreparations(req, res) {
+  try {
+    await Plat.clearPreparations(req.params.id);
+    res.json({ message: 'Préparations supprimées avec succès' });
+  } catch (err) {
+    console.error('Erreur clearPreparations:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
 module.exports = {
   getAllPlats,
   getPlatById,
@@ -179,6 +205,8 @@ module.exports = {
   deletePlat,
   addIngredient,
   removeIngredient,
+  clearIngredients,
   addPreparation,
-  removePreparation
+  removePreparation,
+  clearPreparations
 };

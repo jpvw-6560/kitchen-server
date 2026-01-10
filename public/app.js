@@ -295,13 +295,15 @@ function setupPlatForm() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const favoriFiled = document.getElementById('plat-favori');
     const platData = {
       nom: document.getElementById('plat-nom').value,
       description: document.getElementById('plat-description').value,
       temps_preparation: parseInt(document.getElementById('plat-temps').value) || null,
       difficulte: document.getElementById('plat-difficulte').value,
       conseils_chef: document.getElementById('plat-conseils').value,
-      nombre_personnes: parseInt(document.getElementById('plat-personnes').value) || 4
+      nombre_personnes: parseInt(document.getElementById('plat-personnes').value) || 4,
+      favori: favoriFiled ? favoriFiled.checked : false
     };
     
     try {
@@ -317,6 +319,56 @@ function setupPlatForm() {
       });
       
       const result = await response.json();
+      const platId = state.editingPlat || result.id;
+      
+      // Gérer les ingrédients
+      if (platId) {
+        // Si édition, vider d'abord les anciens ingrédients et préparations
+        if (state.editingPlat) {
+          await fetch(`${API_BASE}/plats/${platId}/ingredients`, { method: 'DELETE' });
+          await fetch(`${API_BASE}/plats/${platId}/preparations`, { method: 'DELETE' });
+        }
+        
+        const ingredientRows = document.querySelectorAll('#plat-ingredients-list .ingredient-row');
+        for (const row of ingredientRows) {
+          const select = row.querySelector('.ingredient-select');
+          const quantite = row.querySelectorAll('input[type="number"]')[0];
+          const unite = row.querySelector('select:not(.ingredient-select)');
+          
+          if (select.value && quantite.value) {
+            await fetch(`${API_BASE}/plats/${platId}/ingredients`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ingredient_id: parseInt(select.value),
+                quantite: parseFloat(quantite.value),
+                unite: unite.value
+              })
+            });
+          }
+        }
+        
+        // Gérer les préparations
+        const preparationRows = document.querySelectorAll('#plat-preparations-list .preparation-row');
+        for (let i = 0; i < preparationRows.length; i++) {
+          const row = preparationRows[i];
+          const description = row.querySelector('textarea');
+          const duree = row.querySelector('input[type="number"]');
+          
+          if (description.value) {
+            await fetch(`${API_BASE}/plats/${platId}/preparations`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ordre: i + 1,
+                description: description.value,
+                duree_minutes: duree.value ? parseInt(duree.value) : null
+              })
+            });
+          }
+        }
+      }
+      
       document.getElementById('modal-plat').classList.remove('active');
       await loadPlats();
     } catch (err) {
@@ -343,6 +395,7 @@ function addIngredientRow() {
   row.innerHTML = `
     <select class="ingredient-select">
       <option value="">Sélectionner...</option>
+      <option value="__new__" style="color: var(--primary); font-weight: 600;">➕ Créer un nouvel ingrédient...</option>
       ${state.ingredients.map(i => `<option value="${i.id}">${i.nom}</option>`).join('')}
     </select>
     <input type="number" placeholder="Quantité" step="0.1" min="0">
@@ -351,6 +404,27 @@ function addIngredientRow() {
     </select>
     <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
   `;
+  
+  // Écouter le changement sur le select pour détecter "Créer nouveau"
+  const select = row.querySelector('.ingredient-select');
+  select.addEventListener('change', async (e) => {
+    if (e.target.value === '__new__') {
+      e.target.value = ''; // Réinitialiser le select
+      const newIngredient = await showQuickIngredientForm();
+      if (newIngredient) {
+        // Recharger la liste des ingrédients
+        await loadIngredients();
+        // Sélectionner le nouvel ingrédient
+        e.target.innerHTML = `
+          <option value="">Sélectionner...</option>
+          <option value="__new__" style="color: var(--primary); font-weight: 600;">➕ Créer un nouvel ingrédient...</option>
+          ${state.ingredients.map(i => `<option value="${i.id}">${i.nom}</option>`).join('')}
+        `;
+        e.target.value = newIngredient.id;
+      }
+    }
+  });
+  
   container.appendChild(row);
 }
 
@@ -394,6 +468,85 @@ function setupIngredientForm() {
       console.error('Erreur sauvegarde ingrédient:', err);
       alert('Erreur lors de la sauvegarde');
     }
+  });
+}
+
+/**
+ * Affiche un formulaire rapide pour créer un ingrédient depuis le modal de recette
+ */
+async function showQuickIngredientForm() {
+  return new Promise((resolve) => {
+    // Créer un overlay personnalisé
+    const overlay = document.createElement('div');
+    overlay.className = 'quick-form-overlay';
+    overlay.innerHTML = `
+      <div class="quick-form-card">
+        <h3 style="margin-bottom: 1rem; color: var(--primary);">➕ Nouvel Ingrédient</h3>
+        <form id="quick-ingredient-form">
+          <div class="form-group">
+            <label>Nom *</label>
+            <input type="text" id="quick-ingredient-nom" required autofocus>
+          </div>
+          <div class="form-group">
+            <label>Unité de base</label>
+            <select id="quick-ingredient-unite">
+              ${state.config.unites.map(u => `<option value="${u}">${u}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select id="quick-ingredient-categorie">
+              ${state.config.categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">💾 Créer</button>
+            <button type="button" class="btn-secondary quick-cancel">Annuler</button>
+          </div>
+        </form>
+      </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Focus sur le champ nom
+    setTimeout(() => {
+      document.getElementById('quick-ingredient-nom').focus();
+    }, 100);
+    
+    // Gérer l'annulation
+    overlay.querySelector('.quick-cancel').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      resolve(null);
+    });
+    
+    // Gérer la soumission
+    overlay.querySelector('#quick-ingredient-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const ingredientData = {
+        nom: document.getElementById('quick-ingredient-nom').value,
+        unite: document.getElementById('quick-ingredient-unite').value,
+        categorie: document.getElementById('quick-ingredient-categorie').value
+      };
+      
+      try {
+        const response = await fetch(`${API_BASE}/ingredients`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ingredientData)
+        });
+        
+        const result = await response.json();
+        document.body.removeChild(overlay);
+        resolve({ id: result.id, ...ingredientData });
+      } catch (err) {
+        console.error('Erreur création ingrédient:', err);
+        alert('Erreur lors de la création de l\'ingrédient');
+        document.body.removeChild(overlay);
+        resolve(null);
+      }
+    });
   });
 }
 
@@ -528,12 +681,106 @@ async function loadListeCourses() {
 }
 
 async function viewPlatDetails(platId) {
-  // Fonction à implémenter pour afficher les détails complets
-  console.log('Voir détails plat', platId);
+  // Pour l'instant, ouvre directement l'édition
+  await editPlat(null, platId);
 }
 
 async function editPlat(event, platId) {
-  event.stopPropagation();
-  // Fonction à implémenter pour éditer
-  console.log('Éditer plat', platId);
+  if (event) event.stopPropagation();
+  
+  try {
+    // Charger les détails complets du plat
+    const response = await fetch(`${API_BASE}/plats/${platId}`);
+    const plat = await response.json();
+    
+    // Mettre à jour l'état
+    state.editingPlat = platId;
+    
+    // Remplir le formulaire
+    document.getElementById('modal-plat-title').textContent = 'Modifier la Recette';
+    document.getElementById('plat-nom').value = plat.nom || '';
+    document.getElementById('plat-description').value = plat.description || '';
+    document.getElementById('plat-temps').value = plat.temps_preparation || '';
+    document.getElementById('plat-difficulte').value = plat.difficulte || 'Moyen';
+    document.getElementById('plat-conseils').value = plat.conseils_chef || '';
+    document.getElementById('plat-personnes').value = plat.nombre_personnes || 4;
+    
+    // Ajouter un champ caché pour le favori
+    const favoriBadge = document.createElement('div');
+    favoriBadge.innerHTML = `
+      <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+        <input type="checkbox" id="plat-favori" ${plat.favori ? 'checked' : ''}>
+        <label for="plat-favori" style="margin: 0;">Marquer comme favori</label>
+      </div>
+    `;
+    
+    // Remplir les ingrédients
+    const ingredientsContainer = document.getElementById('plat-ingredients-list');
+    ingredientsContainer.innerHTML = '';
+    if (plat.ingredients && plat.ingredients.length > 0) {
+      plat.ingredients.forEach(ing => {
+        const row = document.createElement('div');
+        row.className = 'ingredient-row';
+        row.innerHTML = `
+          <select class="ingredient-select">
+            <option value="">Sélectionner...</option>
+            <option value="__new__" style="color: var(--primary); font-weight: 600;">➕ Créer un nouvel ingrédient...</option>
+            ${state.ingredients.map(i => 
+              `<option value="${i.id}" ${i.id === ing.id ? 'selected' : ''}>${i.nom}</option>`
+            ).join('')}
+          </select>
+          <input type="number" placeholder="Quantité" step="0.1" min="0" value="${ing.quantite || ''}">
+          <select>
+            ${state.config.unites.map(u => 
+              `<option value="${u}" ${u === ing.unite ? 'selected' : ''}>${u}</option>`
+            ).join('')}
+          </select>
+          <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+        `;
+        
+        // Ajouter l'écouteur pour "Créer nouveau"
+        const select = row.querySelector('.ingredient-select');
+        select.addEventListener('change', async (e) => {
+          if (e.target.value === '__new__') {
+            e.target.value = ing.id; // Garder la valeur actuelle temporairement
+            const newIngredient = await showQuickIngredientForm();
+            if (newIngredient) {
+              await loadIngredients();
+              e.target.innerHTML = `
+                <option value="">Sélectionner...</option>
+                <option value="__new__" style="color: var(--primary); font-weight: 600;">➕ Créer un nouvel ingrédient...</option>
+                ${state.ingredients.map(i => `<option value="${i.id}">${i.nom}</option>`).join('')}
+              `;
+              e.target.value = newIngredient.id;
+            }
+          }
+        });
+        
+        ingredientsContainer.appendChild(row);
+      });
+    }
+    
+    // Remplir les préparations
+    const preparationsContainer = document.getElementById('plat-preparations-list');
+    preparationsContainer.innerHTML = '';
+    if (plat.preparations && plat.preparations.length > 0) {
+      plat.preparations.forEach((prep, index) => {
+        const row = document.createElement('div');
+        row.className = 'preparation-row';
+        row.innerHTML = `
+          <span style="font-weight: 600; width: 30px;">${index + 1}.</span>
+          <textarea placeholder="Description de l'étape..." rows="2">${prep.description || ''}</textarea>
+          <input type="number" placeholder="⏱ min" style="width: 80px;" min="0" value="${prep.duree_minutes || ''}">
+          <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+        `;
+        preparationsContainer.appendChild(row);
+      });
+    }
+    
+    // Ouvrir le modal
+    document.getElementById('modal-plat').classList.add('active');
+  } catch (err) {
+    console.error('Erreur chargement plat pour édition:', err);
+    alert('Erreur lors du chargement de la recette');
+  }
 }

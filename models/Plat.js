@@ -170,6 +170,14 @@ class Plat {
   }
   
   /**
+   * Supprime tous les ingrédients d'un plat
+   */
+  static async clearIngredients(platId) {
+    await pool.query('DELETE FROM plat_ingredients WHERE plat_id = ?', [platId]);
+    return true;
+  }
+  
+  /**
    * Ajoute une étape de préparation
    */
   static async addPreparation(platId, ordre, description, duree_minutes) {
@@ -185,6 +193,14 @@ class Plat {
    */
   static async removePreparation(preparationId) {
     await pool.query('DELETE FROM preparations WHERE id = ?', [preparationId]);
+    return true;
+  }
+  
+  /**
+   * Supprime toutes les préparations d'un plat
+   */
+  static async clearPreparations(platId) {
+    await pool.query('DELETE FROM preparations WHERE plat_id = ?', [platId]);
     return true;
   }
 }
