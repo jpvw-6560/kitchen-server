@@ -1,18 +1,18 @@
-/* style.css - Cuisine Server */
+/* style.css - Cuisine Server - Dark Mode */
 
 :root {
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
   --secondary: #64748b;
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --border: #e2e8f0;
-  --shadow: rgba(0, 0, 0, 0.1);
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: #334155;
+  --shadow: rgba(0, 0, 0, 0.3);
   --radius: 12px;
 }
 
@@ -158,6 +158,8 @@ body {
 
 .btn-secondary:hover {
   background: #475569;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow);
 }
 
 .btn-danger {
@@ -211,18 +213,18 @@ body {
 }
 
 .badge-facile {
-  background: #d1fae5;
-  color: #065f46;
+  background: #064e3b;
+  color: #6ee7b7;
 }
 
 .badge-moyen {
-  background: #fef3c7;
-  color: #92400e;
+  background: #78350f;
+  color: #fcd34d;
 }
 
 .badge-difficile {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #7f1d1d;
+  color: #fca5a5;
 }
 
 .card-description {
@@ -455,6 +457,8 @@ tbody tr:hover {
   font-size: 1rem;
   font-family: inherit;
   transition: border-color 0.3s;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .form-group input:focus,
@@ -505,6 +509,8 @@ tbody tr:hover {
   padding: 0.5rem;
   border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .btn-remove {
