@@ -43,12 +43,19 @@
           <button class="btn-secondary" id="btn-prev-week">◀ Semaine précédente</button>
           <span id="current-week" class="week-label"></span>
           <button class="btn-secondary" id="btn-next-week">Semaine suivante ▶</button>
+          <button class="btn-danger" id="btn-clear-week" style="margin-left: 1rem;">🗑️ Vider la semaine</button>
         </div>
       </div>
       <div id="calendrier-grid" class="calendrier-container"></div>
       <div class="liste-courses-section">
         <h3>🛒 Liste de courses</h3>
-        <button class="btn-primary" id="btn-liste-courses">Générer la liste</button>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap;">
+          <button class="btn-primary" id="btn-liste-courses">Générer la liste des courses</button>
+          <button class="btn-secondary" id="btn-select-all">Tout sélectionner</button>
+          <button class="btn-secondary" id="btn-deselect-all">Tout désélectionner</button>
+          <button class="btn-secondary" id="btn-preview-courses" style="display: none;">📄 Aperçu pour impression</button>
+          <span id="selection-info" style="color: var(--text-secondary); font-size: 0.9rem;"></span>
+        </div>
         <div id="liste-courses-content"></div>
       </div>
     </div>
@@ -177,6 +184,57 @@
           <button type="button" class="btn-secondary modal-close">Annuler</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Menu du jour -->
+  <div class="modal" id="modal-menu">
+    <div class="modal-content">
+      <span class="modal-close">&times;</span>
+      <h2 id="modal-menu-title">Planifier un menu</h2>
+      <form id="form-menu">
+        <input type="hidden" id="menu-date">
+        
+        <div class="form-group">
+          <label>Date</label>
+          <div id="menu-date-label" style="font-weight: 600; color: var(--primary); padding: 0.5rem 0;"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Recette *</label>
+          <input type="text" id="menu-search" placeholder="Rechercher une recette..." class="search-input" autocomplete="off">
+          <div id="menu-recettes-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); margin-top: 0.5rem; display: none;"></div>
+          <div id="menu-selected-plat" style="margin-top: 0.5rem;"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>Nombre de personnes</label>
+          <input type="number" id="menu-personnes" value="4" min="1" max="20">
+        </div>
+        
+        <div class="form-group">
+          <label>Notes / Variantes</label>
+          <textarea id="menu-notes" rows="3" placeholder="Ex: Avec scarolles, ou remplacer par poireaux..."></textarea>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">💾 Planifier</button>
+          <button type="button" class="btn-danger" id="btn-delete-menu" style="display: none;">🗑️ Supprimer</button>
+          <button type="button" class="btn-secondary modal-close">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modale Aperçu Liste de Courses -->
+  <div id="modal-preview-courses" class="modal">
+    <div class="modal-content" style="max-width: 400px; padding: 1rem;">
+      <span class="modal-close">&times;</span>
+      <h2 style="font-size: 1.3rem; margin-bottom: 1rem;">📄 Liste de Courses</h2>
+      <div style="margin-bottom: 1rem; text-align: center;">
+        <button onclick="window.print()" class="btn-primary">🖨️ Imprimer</button>
+      </div>
+      <div id="preview-courses-content" style="font-family: Arial, sans-serif; font-size: 0.95rem;"></div>
     </div>
   </div>
 

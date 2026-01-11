@@ -662,18 +662,58 @@ function setupCalendrier() {
     loadCalendrierSemaine();
   });
   
+  document.getElementById('btn-clear-week').addEventListener('click', clearWeek);
   document.getElementById('btn-liste-courses').addEventListener('click', loadListeCourses);
+  
+  document.getElementById('btn-select-all').addEventListener('click', () => {
+    document.querySelectorAll('.menu-checkbox').forEach(cb => cb.checked = true);
+    updateSelectionInfo();
+  });
+  
+  document.getElementById('btn-deselect-all').addEventListener('click', () => {
+    document.querySelectorAll('.menu-checkbox').forEach(cb => cb.checked = false);
+    updateSelectionInfo();
+  });
+  
+  document.getElementById('btn-preview-courses').addEventListener('click', showPreviewCourses);
+}
+
+function showPreviewCourses() {
+  const modal = document.getElementById('modal-preview-courses');
+  const content = document.getElementById('preview-courses-content');
+  
+  // Copier le contenu de la liste actuelle pour l'aperçu imprimable
+  const sourceContent = document.getElementById('liste-courses-content').innerHTML;
+  content.innerHTML = sourceContent;
+  
+  modal.style.display = 'block';
+  
+  // Fermer la modale
+  modal.querySelector('.modal-close').onclick = () => {
+    modal.style.display = 'none';
+  };
+  
+  window.onclick = (e) => {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  };
 }
 
 function getMonday(date) {
   const d = new Date(date);
+  d.setHours(0, 0, 0, 0); // Normaliser l'heure
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff));
+  d.setDate(diff);
+  return d;
 }
 
 function formatDate(date) {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatDateFr(date) {
@@ -705,41 +745,84 @@ function renderCalendrier(menus) {
   const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
   
   container.innerHTML = jours.map((jour, index) => {
-    const date = new Date(state.currentWeekStart);
-    date.setDate(date.getDate() + index);
+    const date = new Date(state.currentWeekStart.getFullYear(), 
+                          state.currentWeekStart.getMonth(), 
+                          state.currentWeekStart.getDate() + index);
     const dateStr = formatDate(date);
     
-    const menu = menus.find(m => m.date === dateStr);
+    console.log(`${jour}: dateStr = ${dateStr}`);
+    
+    // Normaliser les dates des menus (enlever la partie temps)
+    const menu = menus.find(m => {
+      const menuDate = m.date.split('T')[0];
+      return menuDate === dateStr;
+    });
     
     return `
-      <div class="jour-card">
-        <div class="jour-header">${jour}</div>
+      <div class="jour-card" data-date="${dateStr}" data-jour="${jour}">
+        <div class="jour-header">
+          ${jour}
+          <div style="display: flex; gap: 0.25rem; align-items: center;">
+            ${menu && menu.plat_nom ? `<input type="checkbox" class="menu-checkbox" data-date="${dateStr}" checked style="cursor: pointer; width: 18px; height: 18px;">` : ''}
+            <button class="btn-icon-small" onclick="openMenuModal('${dateStr}', '${jour}', ${menu ? menu.plat_id : null}, ${menu ? menu.nombre_personnes : 2}, ${menu ? `'${menu.notes || ''}'` : "''"})">
+              ${menu ? '✏️' : '➕'}
+            </button>
+          </div>
+        </div>
         <div class="jour-date">${date.getDate()}/${date.getMonth() + 1}</div>
         ${menu && menu.plat_nom ? `
-          <div class="jour-menu">
+          <div class="jour-menu" onclick="openMenuModal('${dateStr}', '${jour}', ${menu.plat_id}, ${menu.nombre_personnes}, '${menu.notes || ''}')">
             <strong>${menu.plat_nom}</strong>
             <div style="font-size: 0.875rem; color: var(--text-secondary);">
               ${menu.nombre_personnes} pers.
             </div>
+            ${menu.notes ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">${menu.notes}</div>` : ''}
           </div>
         ` : `
-          <div class="menu-empty" style="padding: 1rem 0;">
-            Aucun menu
+          <div class="menu-empty" style="padding: 1rem 0; cursor: pointer;" onclick="openMenuModal('${dateStr}', '${jour}', null, 2, '')">
+            Cliquez pour ajouter
           </div>
         `}
       </div>
     `;
   }).join('');
+  
+  // Mettre à jour le compteur de sélection
+  updateSelectionInfo();
+  
+  // Ajouter les event listeners pour les checkboxes
+  setTimeout(() => {
+    document.querySelectorAll('.menu-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', updateSelectionInfo);
+    });
+  }, 0);
+}
+
+function updateSelectionInfo() {
+  const checkboxes = document.querySelectorAll('.menu-checkbox');
+  const checked = document.querySelectorAll('.menu-checkbox:checked');
+  const info = document.getElementById('selection-info');
+  if (info) {
+    info.textContent = `${checked.length} jour(s) sélectionné(s) sur ${checkboxes.length}`;
+  }
 }
 
 async function loadListeCourses() {
-  const dateDebut = formatDate(state.currentWeekStart);
-  const dateFin = new Date(state.currentWeekStart);
-  dateFin.setDate(dateFin.getDate() + 6);
-  const dateFinStr = formatDate(dateFin);
+  // Récupérer les dates sélectionnées
+  const selectedCheckboxes = document.querySelectorAll('.menu-checkbox:checked');
+  
+  if (selectedCheckboxes.length === 0) {
+    const container = document.getElementById('liste-courses-content');
+    container.innerHTML = '<p class="menu-empty">Veuillez sélectionner au moins un jour</p>';
+    return;
+  }
+  
+  const selectedDates = Array.from(selectedCheckboxes).map(cb => cb.dataset.date);
+  const dateDebut = selectedDates[0];
+  const dateFin = selectedDates[selectedDates.length - 1];
   
   try {
-    const response = await fetch(`${API_BASE}/menus/liste-courses?dateDebut=${dateDebut}&dateFin=${dateFinStr}`);
+    const response = await fetch(`${API_BASE}/menus/liste-courses?dateDebut=${dateDebut}&dateFin=${dateFin}`);
     const ingredients = await response.json();
     
     const container = document.getElementById('liste-courses-content');
@@ -749,28 +832,105 @@ async function loadListeCourses() {
       return;
     }
     
-    // Grouper par catégorie
-    const grouped = {};
+    // Séparer fruits/légumes des autres produits
+    const fruitsLegumes = [];
+    const autresProduits = [];
+    
     ingredients.forEach(ing => {
       const cat = ing.categorie || 'Autres';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(ing);
+      const nom = ing.nom.toLowerCase();
+      
+      // Fruits, légumes, et produits frais (pommes de terre, carottes, oignons, etc.)
+      if (cat.toLowerCase().includes('fruit') || 
+          cat.toLowerCase().includes('légume') ||
+          nom.includes('pomme de terre') ||
+          nom.includes('carotte') ||
+          nom.includes('oignon') ||
+          nom.includes('ail') ||
+          nom.includes('poireau') ||
+          nom.includes('salade') ||
+          nom.includes('tomate') ||
+          nom.includes('courgette') ||
+          nom.includes('aubergine') ||
+          nom.includes('poivron') ||
+          nom.includes('chou') ||
+          nom.includes('navet') ||
+          nom.includes('radis') ||
+          nom.includes('céleri') ||
+          nom.includes('épinard') ||
+          nom.includes('scarolle')) {
+        fruitsLegumes.push(ing);
+      } else {
+        autresProduits.push(ing);
+      }
     });
     
-    container.innerHTML = Object.entries(grouped).map(([categorie, items]) => `
-      <div class="categorie-ingredients">
-        <h4>${categorie}</h4>
-        ${items.map(item => `
-          <div class="ingredient-item">
-            <strong>${item.nom}</strong>: 
-            ${Math.round(item.quantite_totale * 100) / 100} ${item.unite_recette}
-            <span style="color: var(--text-secondary); font-size: 0.875rem;">
-              (${item.dates})
-            </span>
-          </div>
-        `).join('')}
-      </div>
-    `).join('');
+    // Grouper par catégorie dans chaque section
+    const groupedAutres = {};
+    autresProduits.forEach(ing => {
+      const cat = ing.categorie || 'Autres';
+      if (!groupedAutres[cat]) groupedAutres[cat] = [];
+      groupedAutres[cat].push(ing);
+    });
+    
+    const groupedFL = {};
+    fruitsLegumes.forEach(ing => {
+      const cat = ing.categorie || 'Autres';
+      if (!groupedFL[cat]) groupedFL[cat] = [];
+      groupedFL[cat].push(ing);
+    });
+    
+    // Générer le HTML avec deux sections
+    let html = '';
+    
+    // Section 1: Epicerie
+    if (Object.keys(groupedAutres).length > 0) {
+      html += '<div style="margin-bottom: 1.5rem;">';
+      html += '<h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: bold;">1. Epicerie</h3>';
+      
+      Object.entries(groupedAutres).forEach(([categorie, items]) => {
+        items.forEach(item => {
+          const qte = Math.round(item.quantite_totale * 100) / 100;
+          const unite = item.unite_recette.toLowerCase() === 'pièce' || item.unite_recette.toLowerCase() === 'pièces' ? '' : item.unite_recette;
+          const texte = unite ? `${qte} ${unite} ${item.nom}` : `${qte} ${item.nom}`;
+          html += `
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.3rem; font-size: 0.95rem;">
+              <span style="flex-shrink: 0;">☐</span>
+              <span>${texte}</span>
+            </div>
+          `;
+        });
+      });
+      
+      html += '</div>';
+    }
+    
+    // Section 2: Fruits et légumes
+    if (Object.keys(groupedFL).length > 0) {
+      html += '<div style="margin-bottom: 1.5rem;">';
+      html += '<h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: bold;">2. Fruits et légumes</h3>';
+      
+      Object.entries(groupedFL).forEach(([categorie, items]) => {
+        items.forEach(item => {
+          const qte = Math.round(item.quantite_totale * 100) / 100;
+          const unite = item.unite_recette.toLowerCase() === 'pièce' || item.unite_recette.toLowerCase() === 'pièces' ? '' : item.unite_recette;
+          const texte = unite ? `${qte} ${unite} ${item.nom}` : `${qte} ${item.nom}`;
+          html += `
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.3rem; font-size: 0.95rem;">
+              <span style="flex-shrink: 0;">☐</span>
+              <span>${texte}</span>
+            </div>
+          `;
+        });
+      });
+      
+      html += '</div>';
+    }
+    
+    container.innerHTML = html;
+    
+    // Afficher le bouton d'aperçu
+    document.getElementById('btn-preview-courses').style.display = 'inline-block';
   } catch (err) {
     console.error('Erreur chargement liste courses:', err);
   }
@@ -1242,3 +1402,266 @@ async function setPrincipale(mediaId, event) {
     alert('Erreur lors de la définition de la photo principale');
   }
 }
+// ============================================
+// GESTION DU MENU DU JOUR
+// ============================================
+
+let selectedPlatForMenu = null;
+let searchMenuTimeout;
+let menuSearchInitialized = false;
+
+/**
+ * Ouvre la modale pour planifier un menu
+ */
+async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, notes = "") {
+  const modal = document.getElementById("modal-menu");
+  const title = document.getElementById("modal-menu-title");
+  const dateLabel = document.getElementById("menu-date-label");
+  const deleteBtn = document.getElementById("btn-delete-menu");
+  
+  // Configurer la modale
+  document.getElementById("menu-date").value = dateStr;
+  const date = new Date(dateStr + "T12:00:00");
+  dateLabel.textContent = `${jour} ${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`;
+  document.getElementById("menu-personnes").value = nbPersonnes;
+  document.getElementById("menu-notes").value = notes || "";
+  document.getElementById("menu-search").value = "";
+  document.getElementById("menu-recettes-list").style.display = "none";
+  
+  // Si un plat est déjà planifié, charger ses infos
+  if (platId && platId !== "null") {
+    title.textContent = "Modifier le menu";
+    deleteBtn.style.display = "inline-block";
+    deleteBtn.onclick = () => deleteMenu(dateStr);
+    
+    try {
+      const response = await fetch(`${API_BASE}/plats/${platId}`);
+      const plat = await response.json();
+      selectedPlatForMenu = plat;
+      displaySelectedPlat(plat);
+    } catch (err) {
+      console.error("Erreur chargement plat:", err);
+    }
+  } else {
+    title.textContent = "Planifier un menu";
+    deleteBtn.style.display = "none";
+    selectedPlatForMenu = null;
+    document.getElementById("menu-selected-plat").innerHTML = "";
+  }
+  
+  // Initialiser la recherche si pas encore fait
+  if (!menuSearchInitialized) {
+    const searchInput = document.getElementById("menu-search");
+    const resultsList = document.getElementById("menu-recettes-list");
+    
+    if (searchInput && resultsList) {
+      console.log("Initialisation de la recherche menu");
+      
+      searchInput.addEventListener("input", async (e) => {
+        clearTimeout(searchMenuTimeout);
+        const query = e.target.value.trim();
+        
+        console.log("Recherche:", query);
+        
+        if (query.length < 2) {
+          resultsList.style.display = "none";
+          return;
+        }
+        
+        searchMenuTimeout = setTimeout(async () => {
+          try {
+            const response = await fetch(`${API_BASE}/plats`);
+            const plats = await response.json();
+            
+            console.log("Plats récupérés:", plats.length);
+            console.log("Noms des plats:", plats.map(p => p.nom).join(", "));
+            
+            const filtered = plats.filter(p => 
+              p.nom.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            console.log("Plats filtrés:", filtered.length);
+            console.log("Recherche:", query);
+            
+            if (filtered.length === 0) {
+              resultsList.innerHTML = '<div style="padding: 1rem; color: var(--text-secondary);">Aucune recette trouvée</div>';
+              resultsList.style.display = "block";
+              return;
+            }
+            
+            resultsList.innerHTML = filtered.map(plat => {
+              const nomEchape = plat.nom.replace(/'/g, "\\'");
+              const diffEchape = (plat.difficulte || "").replace(/'/g, "\\'");
+              return `
+                <div class="search-result-item" onclick="selectPlatForMenu(${plat.id}, '${nomEchape}', ${plat.temps_preparation || 0}, '${diffEchape}')">
+                  <strong>${plat.nom}</strong>
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    ${plat.temps_preparation ? `⏱️ ${plat.temps_preparation} min` : ""} 
+                    ${plat.difficulte ? `• ${plat.difficulte}` : ""}
+                  </div>
+                </div>
+              `;
+            }).join("");
+            
+            resultsList.style.display = "block";
+          } catch (err) {
+            console.error("Erreur recherche:", err);
+          }
+        }, 300);
+      });
+      
+      menuSearchInitialized = true;
+    }
+  }
+  
+  modal.style.display = "flex";
+  
+  // Focus sur le champ de recherche
+  setTimeout(() => document.getElementById("menu-search").focus(), 100);
+}
+
+/**
+ * Affiche le plat sélectionné
+ */
+function displaySelectedPlat(plat) {
+  const container = document.getElementById("menu-selected-plat");
+  container.innerHTML = `
+    <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: var(--radius); border: 2px solid var(--primary);">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong>${plat.nom}</strong>
+          <div style="font-size: 0.875rem; color: var(--text-secondary);">
+            ${plat.temps_preparation ? `⏱️ ${plat.temps_preparation} min` : ""} 
+            ${plat.difficulte ? `• ${plat.difficulte}` : ""}
+          </div>
+        </div>
+        <button type="button" onclick="clearSelectedPlat()" class="btn-icon-small" title="Changer de recette">❌</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("menu-recettes-list").style.display = "none";
+}
+
+/**
+ * Efface le plat sélectionné
+ */
+function clearSelectedPlat() {
+  selectedPlatForMenu = null;
+  document.getElementById("menu-selected-plat").innerHTML = "";
+  document.getElementById("menu-search").value = "";
+  document.getElementById("menu-search").focus();
+}
+
+/**
+ * Sélectionne un plat pour le menu
+ */
+function selectPlatForMenu(id, nom, temps, difficulte) {
+  selectedPlatForMenu = { id, nom, temps_preparation: temps, difficulte };
+  displaySelectedPlat(selectedPlatForMenu);
+}
+
+
+/**
+ * Enregistre le menu
+ */
+async function saveMenu() {
+  if (!selectedPlatForMenu) {
+    alert("Veuillez sélectionner une recette");
+    return;
+  }
+  
+  const dateStr = document.getElementById("menu-date").value;
+  const nbPersonnes = parseInt(document.getElementById("menu-personnes").value);
+  const notes = document.getElementById("menu-notes").value;
+  
+  console.log("Sauvegarde menu pour la date:", dateStr);
+  
+  try {
+    const response = await fetch(`${API_BASE}/menus`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: dateStr,
+        plat_id: selectedPlatForMenu.id,
+        nombre_personnes: nbPersonnes,
+        notes: notes
+      })
+    });
+    
+    if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
+    
+    document.getElementById("modal-menu").style.display = "none";
+    await loadCalendrierSemaine();
+    
+  } catch (err) {
+    console.error("Erreur sauvegarde menu:", err);
+    alert("Erreur lors de la sauvegarde du menu");
+  }
+}
+
+/**
+ * Supprime un menu
+ */
+async function deleteMenu(dateStr) {
+  console.log("Tentative de suppression pour la date:", dateStr);
+  
+  if (!confirm("Voulez-vous vraiment supprimer ce menu ?")) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/menus/${dateStr}`, {
+      method: "DELETE"
+    });
+    
+    console.log("Réponse suppression:", response.status);
+    
+    if (!response.ok) throw new Error("Erreur lors de la suppression");
+    
+    document.getElementById("modal-menu").style.display = "none";
+    await loadCalendrierSemaine();
+    
+  } catch (err) {
+    console.error("Erreur suppression menu:", err);
+    alert("Erreur lors de la suppression du menu");
+  }
+}
+
+/**
+ * Supprime tous les menus de la semaine affichée
+ */
+async function clearWeek() {
+  if (!confirm("Voulez-vous vraiment vider tous les menus de cette semaine ?")) return;
+  
+  try {
+    // Générer les 7 dates de la semaine
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(state.currentWeekStart);
+      date.setDate(date.getDate() + i);
+      dates.push(formatDate(date));
+    }
+    
+    // Supprimer chaque date
+    const promises = dates.map(dateStr => 
+      fetch(`${API_BASE}/menus/${dateStr}`, { method: "DELETE" })
+    );
+    
+    await Promise.all(promises);
+    
+    await loadCalendrierSemaine();
+    
+  } catch (err) {
+    console.error("Erreur vidage semaine:", err);
+    alert("Erreur lors du vidage de la semaine");
+  }
+}
+
+// Gérer la soumission du formulaire menu au chargement
+document.addEventListener('DOMContentLoaded', () => {
+  const formMenu = document.getElementById("form-menu");
+  if (formMenu) {
+    formMenu.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await saveMenu();
+    });
+  }
+});

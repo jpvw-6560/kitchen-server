@@ -11,7 +11,9 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'cuisine_db',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  timezone: '+00:00', // Utiliser UTC pour éviter les conversions
+  dateStrings: true // Retourner les dates comme des strings
 });
 
 /**
