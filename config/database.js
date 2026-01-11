@@ -89,11 +89,22 @@ async function initDatabase() {
         nom_original VARCHAR(255),
         description TEXT,
         taille_fichier INT,
+        principale BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (plat_id) REFERENCES plats(id) ON DELETE CASCADE,
-        INDEX idx_plat (plat_id)
+        INDEX idx_plat (plat_id),
+        INDEX idx_principale (plat_id, principale)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    
+    // Ajouter la colonne principale si elle n'existe pas déjà
+    try {
+      await connection.query(`
+        ALTER TABLE medias ADD COLUMN IF NOT EXISTS principale BOOLEAN DEFAULT FALSE
+      `);
+    } catch (err) {
+      // Ignorer si la colonne existe déjà
+    }
     
     // Table du calendrier des menus
     await connection.query(`

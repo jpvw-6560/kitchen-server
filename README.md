@@ -131,8 +131,34 @@ Le serveur crée automatiquement les tables suivantes au démarrage :
 
 ### Médias
 - `GET /api/medias/plat/:platId` - Médias d'un plat
-- `POST /api/medias` - Upload un média (multipart/form-data)
+- `POST /api/medias/upload` - Upload un média (multipart/form-data)
+  - Body: `media` (file), `plat_id` (number), `description` (string, optionnel)
+- `PATCH /api/medias/:id` - Modifier la description
 - `DELETE /api/medias/:id` - Supprimer un média
+
+### Configuration
+- `GET /api/config` - Configuration (difficultés, unités, catégories)
+
+## 📸 Gestion des médias
+
+Le serveur supporte l'upload de **photos** et **vidéos** pour chaque recette :
+
+**Formats supportés :**
+- Images : jpg, jpeg, png, gif, webp
+- Vidéos : mp4, webm, avi, mov
+
+**Taille maximale :** 16 MB par fichier
+
+**Upload multiple :** Possible de sélectionner plusieurs fichiers simultanément
+
+**Fonctionnalités :**
+- Galerie avec aperçu miniature
+- Visualisation en plein écran (clic sur le média)
+- Suppression individuelle
+- Les fichiers sont stockés dans `/uploads`
+- Accès direct via `/uploads/filename.jpg`
+
+⚠️ **Important** : Pour ajouter des médias, la recette doit d'abord être enregistrée.
 
 ## 🎨 Interface utilisateur
 

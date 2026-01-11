@@ -9,10 +9,13 @@ class Plat {
    */
   static async getAll() {
     const [rows] = await pool.query(`
-      SELECT p.*, COUNT(DISTINCT pi.id) as nb_ingredients
+      SELECT p.*, 
+             COUNT(DISTINCT pi.id) as nb_ingredients,
+             m.chemin_fichier as photo_principale
       FROM plats p
       LEFT JOIN plat_ingredients pi ON p.id = pi.plat_id
-      GROUP BY p.id
+      LEFT JOIN medias m ON p.id = m.plat_id AND m.principale = TRUE AND m.type = 'image'
+      GROUP BY p.id, m.chemin_fichier
       ORDER BY p.created_at DESC
     `);
     return rows;

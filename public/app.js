@@ -179,7 +179,10 @@ function renderPlats(platsToRender = state.plats) {
     <div class="card" onclick="viewPlatDetails(${plat.id})">
       <div class="card-header">
         <h3 class="card-title">${plat.nom}</h3>
-        <span class="card-badge badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
+        <div class="card-header-right">
+          <span class="card-badge badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
+          ${plat.photo_principale ? `<img src="/${plat.photo_principale}" alt="${plat.nom}" class="card-photo">` : ''}
+        </div>
       </div>
       ${plat.description ? `<p class="card-description">${plat.description}</p>` : ''}
       <div class="card-meta">
@@ -188,6 +191,7 @@ function renderPlats(platsToRender = state.plats) {
         <span>🥕 ${plat.nb_ingredients} ingr.</span>
       </div>
       <div class="card-actions">
+        <button class="btn-icon" onclick="viewRecette(event, ${plat.id})" title="Voir la recette">👁️</button>
         <button class="btn-icon btn-favori ${plat.favori ? 'active' : ''}" 
                 onclick="toggleFavori(event, ${plat.id})" 
                 title="Favori">⭐</button>
@@ -457,6 +461,26 @@ function setupPlatForm() {
   // Ajouter étape
   document.getElementById('btn-add-preparation').addEventListener('click', () => {
     addPreparationRow();
+  });
+  
+  // Ajouter médias
+  document.getElementById('btn-add-media').addEventListener('click', () => {
+    document.getElementById('media-file-input').click();
+  });
+  
+  document.getElementById('media-file-input').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    // Vérifier qu'on est en mode édition (sinon il faut sauvegarder le plat d'abord)
+    if (!state.editingPlat) {
+      alert('⚠️ Veuillez d\'abord enregistrer la recette avant d\'ajouter des médias');
+      e.target.value = '';
+      return;
+    }
+    
+    await uploadMediaFiles(state.editingPlat, files);
+    e.target.value = ''; // Réinitialiser l'input
   });
 }
 
@@ -757,6 +781,208 @@ async function viewPlatDetails(platId) {
   await editPlat(null, platId);
 }
 
+/**
+ * Affiche la recette en mode pleine page (mode cuisine)
+ */
+async function viewRecette(event, platId) {
+  if (event) event.stopPropagation();
+  
+  try {
+    // Charger les détails complets du plat
+    const response = await fetch(`${API_BASE}/plats/${platId}`);
+    const plat = await response.json();
+    
+    // Créer la vue pleine page
+    const viewer = document.createElement('div');
+    viewer.className = 'recette-viewer';
+    
+    // Trouver la vidéo si elle existe
+    const video = plat.medias?.find(m => m.type === 'video');
+    
+    viewer.innerHTML = `
+      <div class="recette-viewer-header">
+        <h1>${plat.nom}</h1>
+        <div class="recette-viewer-actions">
+          ${video ? `<button class="btn-primary" onclick="playRecetteVideo('${video.chemin_fichier}')">🎥 Voir la vidéo</button>` : ''}
+          <button class="btn-secondary" onclick="closeRecetteViewer()">✕ Fermer</button>
+        </div>
+      </div>
+      <div class="recette-viewer-content">
+        <div class="recette-viewer-left">
+          <h2>🥕 Ingrédients</h2>
+          <div class="recette-viewer-meta">
+            <span>👥 ${plat.nombre_personnes} personnes</span>
+            ${plat.temps_preparation ? `<span>⏱ ${plat.temps_preparation} min</span>` : ''}
+            <span class="badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
+          </div>
+          ${plat.ingredients && plat.ingredients.length > 0 ? `
+            <ul class="recette-viewer-ingredients">
+              ${plat.ingredients.map(ing => `
+                <li>
+                  <span class="ingredient-quantite">${ing.quantite} ${ing.unite}</span>
+                  <span class="ingredient-nom">${ing.nom}</span>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p>Aucun ingrédient</p>'}
+          ${plat.conseils_chef ? `
+            <div class="recette-viewer-conseils">
+              <h3>💡 Conseils du chef</h3>
+              <p>${plat.conseils_chef}</p>
+            </div>
+          ` : ''}
+        </div>
+        <div class="recette-viewer-right">
+          <h2>📝 Préparation</h2>
+          ${plat.preparations && plat.preparations.length > 0 ? `
+            <ol class="recette-viewer-steps">
+              ${plat.preparations.map(prep => `
+                <li>
+                  <div class="step-description">${prep.description}</div>
+                  ${prep.duree_minutes ? `<div class="step-duration">⏱ ${prep.duree_minutes} min</div>` : ''}
+                </li>
+              `).join('')}
+            </ol>
+          ` : '<p>Aucune étape de préparation</p>'}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(viewer);
+    
+    // Empêcher le scroll du body
+    document.body.style.overflow = 'hidden';
+  } catch (err) {
+    console.error('Erreur chargement recette:', err);
+    alert('Erreur lors du chargement de la recette');
+  }
+}
+
+/**
+ * Ferme la vue pleine page
+ */
+function closeRecetteViewer() {
+  const viewer = document.querySelector('.recette-viewer');
+  if (viewer) {
+    viewer.remove();
+    document.body.style.overflow = '';
+  }
+}
+
+/**
+ * Affiche la vidéo de la recette
+ */
+function playRecetteVideo(cheminFichier) {
+  const modal = document.createElement('div');
+  modal.className = 'media-viewer-modal';
+  modal.innerHTML = `<video src="/${cheminFichier}" controls autoplay style="max-width: 90vw; max-height: 90vh;"></video>`;
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
+  document.body.appendChild(modal);
+}
+
+/**
+ * Affiche la recette en mode pleine page (mode cuisine)
+ */
+async function viewRecette(event, platId) {
+  if (event) event.stopPropagation();
+  
+  try {
+    // Charger les détails complets du plat
+    const response = await fetch(`${API_BASE}/plats/${platId}`);
+    const plat = await response.json();
+    
+    // Créer la vue pleine page
+    const viewer = document.createElement('div');
+    viewer.className = 'recette-viewer';
+    
+    // Trouver la vidéo si elle existe
+    const video = plat.medias?.find(m => m.type === 'video');
+    
+    viewer.innerHTML = `
+      <div class="recette-viewer-header">
+        <h1>${plat.nom}</h1>
+        <div class="recette-viewer-actions">
+          ${video ? `<button class="btn-primary" onclick="playRecetteVideo('${video.chemin_fichier}')">🎥 Voir la vidéo</button>` : ''}
+          <button class="btn-secondary" onclick="closeRecetteViewer()">✕ Fermer</button>
+        </div>
+      </div>
+      <div class="recette-viewer-content">
+        <div class="recette-viewer-left">
+          <h2>🥕 Ingrédients</h2>
+          <div class="recette-viewer-meta">
+            <span>👥 ${plat.nombre_personnes} personnes</span>
+            ${plat.temps_preparation ? `<span>⏱ ${plat.temps_preparation} min</span>` : ''}
+            <span class="badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
+          </div>
+          ${plat.ingredients && plat.ingredients.length > 0 ? `
+            <ul class="recette-viewer-ingredients">
+              ${plat.ingredients.map(ing => `
+                <li>
+                  <span class="ingredient-quantite">${ing.quantite} ${ing.unite}</span>
+                  <span class="ingredient-nom">${ing.nom}</span>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p>Aucun ingrédient</p>'}
+          ${plat.conseils_chef ? `
+            <div class="recette-viewer-conseils">
+              <h3>💡 Conseils du chef</h3>
+              <p>${plat.conseils_chef}</p>
+            </div>
+          ` : ''}
+        </div>
+        <div class="recette-viewer-right">
+          <h2>📝 Préparation</h2>
+          ${plat.preparations && plat.preparations.length > 0 ? `
+            <ol class="recette-viewer-steps">
+              ${plat.preparations.map(prep => `
+                <li>
+                  <div class="step-description">${prep.description}</div>
+                  ${prep.duree_minutes ? `<div class="step-duration">⏱ ${prep.duree_minutes} min</div>` : ''}
+                </li>
+              `).join('')}
+            </ol>
+          ` : '<p>Aucune étape de préparation</p>'}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(viewer);
+    
+    // Empêcher le scroll du body
+    document.body.style.overflow = 'hidden';
+  } catch (err) {
+    console.error('Erreur chargement recette:', err);
+    alert('Erreur lors du chargement de la recette');
+  }
+}
+
+/**
+ * Ferme la vue pleine page
+ */
+function closeRecetteViewer() {
+  const viewer = document.querySelector('.recette-viewer');
+  if (viewer) {
+    viewer.remove();
+    document.body.style.overflow = '';
+  }
+}
+
+/**
+ * Affiche la vidéo de la recette
+ */
+function playRecetteVideo(cheminFichier) {
+  const modal = document.createElement('div');
+  modal.className = 'media-viewer-modal';
+  modal.innerHTML = `<video src="/${cheminFichier}" controls autoplay style="max-width: 90vw; max-height: 90vh;"></video>`;
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
+  document.body.appendChild(modal);
+}
+
 async function editPlat(event, platId) {
   if (event) event.stopPropagation();
   
@@ -849,10 +1075,170 @@ async function editPlat(event, platId) {
       });
     }
     
+    // Remplir les médias
+    await loadMediasForPlat(platId);
+    
     // Ouvrir le modal
     document.getElementById('modal-plat').classList.add('active');
   } catch (err) {
     console.error('Erreur chargement plat pour édition:', err);
     alert('Erreur lors du chargement de la recette');
+  }
+}
+
+/**
+ * Charge et affiche les médias d'un plat
+ */
+async function loadMediasForPlat(platId) {
+  try {
+    const response = await fetch(`${API_BASE}/medias/plat/${platId}`);
+    const medias = await response.json();
+    
+    const container = document.getElementById('plat-medias-list');
+    container.innerHTML = '';
+    
+    if (medias.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-secondary); font-style: italic;">Aucun média pour cette recette</p>';
+      return;
+    }
+    
+    medias.forEach(media => {
+      const mediaCard = document.createElement('div');
+      mediaCard.className = 'media-card';
+      
+      if (media.type === 'image') {
+        mediaCard.innerHTML = `
+          <img src="/${media.chemin_fichier}" alt="${media.nom_original}" onclick="viewMedia('${media.chemin_fichier}', 'image')">
+          <div class="media-overlay">
+            <button class="btn-media-delete" onclick="deleteMedia(${media.id})" title="Supprimer">🗑️</button>
+          </div>
+          <div class="media-principale">
+            <input type="checkbox" id="principale_${media.id}" ${media.principale ? 'checked' : ''} 
+                   onclick="setPrincipale(${media.id}, event)">
+            <label for="principale_${media.id}" title="Photo principale">⭐</label>
+          </div>
+        `;
+      } else if (media.type === 'video') {
+        mediaCard.innerHTML = `
+          <video src="/${media.chemin_fichier}" onclick="viewMedia('${media.chemin_fichier}', 'video')"></video>
+          <div class="media-overlay">
+            <button class="btn-media-delete" onclick="deleteMedia(${media.id})" title="Supprimer">🗑️</button>
+            <span class="media-type-badge">🎥</span>
+          </div>
+        `;
+      }
+      
+      container.appendChild(mediaCard);
+    });
+  } catch (err) {
+    console.error('Erreur chargement médias:', err);
+  }
+}
+
+/**
+ * Upload de fichiers médias
+ */
+async function uploadMediaFiles(platId, files) {
+  const uploadPromises = files.map(async (file) => {
+    const formData = new FormData();
+    formData.append('media', file);
+    formData.append('plat_id', platId);
+    
+    try {
+      const response = await fetch(`${API_BASE}/medias/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erreur upload ${file.name}`);
+      }
+      
+      return await response.json();
+    } catch (err) {
+      console.error(`Erreur upload ${file.name}:`, err);
+      throw err;
+    }
+  });
+  
+  try {
+    await Promise.all(uploadPromises);
+    console.log('Tous les médias uploadés avec succès');
+    // Recharger les médias
+    await loadMediasForPlat(platId);
+  } catch (err) {
+    alert('Erreur lors de l\'upload de certains fichiers');
+  }
+}
+
+/**
+ * Supprime un média
+ */
+async function deleteMedia(mediaId) {
+  const confirmed = await showConfirmDialog(
+    'Voulez-vous vraiment supprimer ce média ?',
+    'Suppression',
+    '🗑️'
+  );
+  
+  if (!confirmed) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/medias/${mediaId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur suppression');
+    }
+    
+    // Recharger les médias
+    await loadMediasForPlat(state.editingPlat);
+  } catch (err) {
+    console.error('Erreur suppression média:', err);
+    alert('Erreur lors de la suppression du média');
+  }
+}
+
+/**
+ * Affiche un média en plein écran
+ */
+function viewMedia(chemin, type) {
+  const modal = document.createElement('div');
+  modal.className = 'media-viewer-modal';
+  modal.onclick = () => modal.remove();
+  
+  if (type === 'image') {
+    modal.innerHTML = `<img src="/${chemin}" alt="Media">`;
+  } else if (type === 'video') {
+    modal.innerHTML = `<video src="/${chemin}" controls autoplay></video>`;
+  }
+  
+  document.body.appendChild(modal);
+}
+
+/**
+ * Définit un média comme photo principale
+ */
+async function setPrincipale(mediaId, event) {
+  event.stopPropagation();
+  
+  try {
+    const response = await fetch(`${API_BASE}/medias/${mediaId}/principale`, {
+      method: 'PATCH'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors de la mise à jour');
+    }
+    
+    // Recharger les médias pour mettre à jour l'affichage
+    await loadMediasForPlat(state.editingPlat);
+    
+    // Recharger les plats pour mettre à jour la carte
+    await loadPlats();
+  } catch (err) {
+    console.error('Erreur setPrincipale:', err);
+    alert('Erreur lors de la définition de la photo principale');
   }
 }

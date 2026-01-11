@@ -46,11 +46,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Route par défaut pour le frontend
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
 // Initialisation de la base de données et démarrage du serveur
 async function startServer() {
   try {

@@ -195,14 +195,31 @@ body {
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: start;
-  margin-bottom: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.card-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
 }
 
 .card-title {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
+  flex: 1;
+}
+
+.card-photo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--border);
 }
 
 .card-badge {
@@ -717,3 +734,324 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+/* Styles pour les médias */
+.medias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.media-card {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.media-card:hover {
+  transform: scale(1.05);
+}
+
+.media-card img,
+.media-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.media-card:hover .media-overlay {
+  opacity: 1;
+}
+
+.btn-media-delete {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.btn-media-delete:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.media-type-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: var(--primary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.media-principale {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 10;
+}
+
+.media-principale input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.media-principale label {
+  cursor: pointer;
+  margin: 0;
+  font-size: 1rem;
+  user-select: none;
+}
+
+.media-upload-zone {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Modal de visualisation des médias */
+.media-viewer-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: fadeIn 0.3s;
+}
+
+.media-viewer-modal img,
+.media-viewer-modal video {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Vue recette pleine page (mode cuisine) */
+.recette-viewer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-primary);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.3s;
+  overflow: hidden;
+}
+
+.recette-viewer-header {
+  background: var(--bg-secondary);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+.recette-viewer-header h1 {
+  font-size: 2rem;
+  margin: 0;
+  color: var(--primary);
+}
+
+.recette-viewer-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.recette-viewer-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  overflow: hidden;
+  height: 100%;
+}
+
+.recette-viewer-left,
+.recette-viewer-right {
+  background: var(--bg-secondary);
+  padding: 2rem;
+  border-radius: var(--radius);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.recette-viewer-left h2,
+.recette-viewer-right h2 {
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+  font-size: 1.75rem;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.recette-viewer-meta {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+
+.recette-viewer-ingredients {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recette-viewer-ingredients li {
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  display: flex;
+  gap: 1rem;
+  font-size: 1.1rem;
+}
+
+.ingredient-quantite {
+  color: var(--primary);
+  font-weight: 700;
+  min-width: 80px;
+}
+
+.ingredient-nom {
+  color: var(--text-primary);
+}
+
+.recette-viewer-conseils {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 4px solid var(--warning);
+}
+
+.recette-viewer-conseils h3 {
+  color: var(--warning);
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.recette-viewer-conseils p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 1.05rem;
+}
+
+.recette-viewer-steps {
+  list-style: none;
+  counter-reset: step-counter;
+  padding: 0;
+  margin: 0;
+}
+
+.recette-viewer-steps li {
+  counter-increment: step-counter;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  position: relative;
+  padding-left: 4rem;
+}
+
+.recette-viewer-steps li::before {
+  content: counter(step-counter);
+  position: absolute;
+  left: 1rem;
+  top: 1.5rem;
+  width: 36px;
+  height: 36px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.step-description {
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.step-duration {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+/* Responsive pour tablette */
+@media (max-width: 1024px) {
+  .recette-viewer-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .recette-viewer-left,
+  .recette-viewer-right {
+    height: auto;
+  }
+}
+

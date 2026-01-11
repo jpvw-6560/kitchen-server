@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cuisine Server - Gestion de Recettes</title>
+  <title>Receip Server</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- Navigation -->
   <nav class="navbar">
     <div class="nav-container">
-      <h1 class="logo">👨‍🍳 Cuisine Server</h1>
+      <h1 class="logo">👨‍🍳 Receip Server</h1>
       <div class="nav-menu">
         <button class="nav-btn active" data-view="plats">📖 Recettes</button>
         <button class="nav-btn" data-view="calendrier">📅 Calendrier</button>
@@ -131,6 +131,19 @@
           <h3>📝 Étapes de préparation</h3>
           <div id="plat-preparations-list"></div>
           <button type="button" class="btn-secondary" id="btn-add-preparation">➕ Ajouter une étape</button>
+        </div>
+
+        <!-- Section Médias (Photos & Vidéos) -->
+        <div class="form-section">
+          <h3>📸 Photos & Vidéos</h3>
+          <div id="plat-medias-list" class="medias-grid"></div>
+          <div class="media-upload-zone">
+            <input type="file" id="media-file-input" accept="image/*,video/*" multiple style="display: none;">
+            <button type="button" class="btn-secondary" id="btn-add-media">➕ Ajouter des médias</button>
+            <span class="text-muted" style="font-size: 0.875rem; margin-left: 0.5rem;">
+              (Images: jpg, png, gif | Vidéos: mp4, webm, avi)
+            </span>
+          </div>
         </div>
 
         <div class="form-actions">

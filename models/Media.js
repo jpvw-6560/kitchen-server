@@ -76,6 +76,41 @@ class Media {
     );
     return rows[0].count;
   }
+  
+  /**
+   * Définit un média comme photo principale
+   * (déselectionne les autres photos du même plat)
+   */
+  static async setPrincipale(id) {
+    // Récupérer le plat_id du média
+    const media = await this.getById(id);
+    if (!media) return false;
+    
+    // Désélectionner toutes les photos principales du plat
+    await pool.query(
+      'UPDATE medias SET principale = FALSE WHERE plat_id = ?',
+      [media.plat_id]
+    );
+    
+    // Sélectionner cette photo comme principale
+    await pool.query(
+      'UPDATE medias SET principale = TRUE WHERE id = ?',
+      [id]
+    );
+    
+    return true;
+  }
+  
+  /**
+   * Récupère la photo principale d'un plat
+   */
+  static async getPrincipaleByPlat(platId) {
+    const [rows] = await pool.query(
+      'SELECT * FROM medias WHERE plat_id = ? AND principale = TRUE AND type = "image" LIMIT 1',
+      [platId]
+    );
+    return rows.length > 0 ? rows[0] : null;
+  }
 }
 
 module.exports = Media;

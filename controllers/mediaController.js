@@ -115,10 +115,24 @@ async function deleteMedia(req, res) {
   }
 }
 
+/**
+ * Définit un média comme photo principale
+ */
+async function setPrincipale(req, res) {
+  try {
+    await Media.setPrincipale(req.params.id);
+    res.json({ message: 'Photo principale mise à jour' });
+  } catch (err) {
+    console.error('Erreur setPrincipale:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
 module.exports = {
   getMediasByPlat,
   uploadMedia,
   updateMediaDescription,
   deleteMedia,
+  setPrincipale,
   upload
 };
