@@ -16,7 +16,8 @@ const state = {
   config: {},
   currentWeekStart: null,
   editingPlat: null,
-  editingIngredient: null
+  editingIngredient: null,
+  editMode: false  // Mode édition désactivé par défaut
 };
 
 /**
@@ -90,6 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupPlatForm();
   setupIngredientForm();
   setupCalendrier();
+  setupEditModeToggle();
+  updateEditModeUI();  // Initialiser l'état des boutons
 });
 
 // Chargement des données
@@ -173,6 +176,46 @@ function switchView(viewName) {
   }
 }
 
+/**
+ * Configure le toggle du mode édition
+ */
+function setupEditModeToggle() {
+  const toggle = document.getElementById('edit-mode-switch');
+  toggle.addEventListener('change', () => {
+    state.editMode = toggle.checked;
+    updateEditModeUI();
+  });
+}
+
+/**
+ * Met à jour l'interface selon le mode édition
+ */
+function updateEditModeUI() {
+  const editMode = state.editMode;
+  
+  // Boutons de création
+  const createButtons = [
+    'btn-new-plat',
+    'btn-new-ingredient'
+  ];
+  
+  createButtons.forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.disabled = !editMode;
+      btn.style.opacity = editMode ? '1' : '0.5';
+      btn.style.cursor = editMode ? 'pointer' : 'not-allowed';
+    }
+  });
+  
+  // Re-render les listes pour appliquer les changements aux boutons d'action
+  if (state.currentView === 'plats') {
+    renderPlats();
+  } else if (state.currentView === 'ingredients') {
+    renderIngredients();
+  }
+}
+
 // Rendu des plats
 function renderPlats(platsToRender = state.plats) {
   const container = document.getElementById('plats-list');
@@ -224,8 +267,10 @@ function renderPlats(platsToRender = state.plats) {
         <button class="btn-icon btn-favori ${plat.favori ? 'active' : ''}" 
                 onclick="toggleFavori(event, ${plat.id})" 
                 title="Favori">⭐</button>
-        <button class="btn-icon" onclick="editPlat(event, ${plat.id})" title="Modifier">✏️</button>
-        <button class="btn-icon" onclick="deletePlat(event, ${plat.id})" title="Supprimer">🗑️</button>
+        <button class="btn-icon" onclick="editPlat(event, ${plat.id})" title="Modifier" 
+                ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
+        <button class="btn-icon" onclick="deletePlat(event, ${plat.id})" title="Supprimer" 
+                ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>🗑️</button>
       </div>
     </div>
   `).join('');
@@ -288,8 +333,10 @@ function renderIngredients(ingredientsToRender = state.ingredients) {
               <td>${ing.nom}</td>
               <td>${ing.unite || '-'}</td>
               <td>
-                <button class="btn-icon" onclick="editIngredient(${ing.id})" title="Modifier">✏️</button>
-                <button class="btn-icon" onclick="deleteIngredient(${ing.id})" title="Supprimer">🗑️</button>
+                <button class="btn-icon" onclick="editIngredient(${ing.id})" title="Modifier" 
+                        ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
+                <button class="btn-icon" onclick="deleteIngredient(${ing.id})" title="Supprimer" 
+                        ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>🗑️</button>
               </td>
             </tr>
           `).join('')}
@@ -360,6 +407,11 @@ async function toggleFavori(event, platId) {
 async function deletePlat(event, platId) {
   event.stopPropagation();
   
+  if (!state.editMode) {
+    alert('Veuillez activer le mode édition pour supprimer une recette.');
+    return;
+  }
+  
   const confirmed = await showConfirmDialog(
     'Cette action est irréversible. Tous les ingrédients et étapes de préparation seront également supprimés.',
     'Supprimer cette recette ?',
@@ -377,6 +429,11 @@ async function deletePlat(event, platId) {
 }
 
 async function editIngredient(ingredientId) {
+  if (!state.editMode) {
+    alert('Veuillez activer le mode édition pour modifier un ingrédient.');
+    return;
+  }
+  
   try {
     // Charger les données de l'ingrédient
     const response = await fetch(`${API_BASE}/ingredients/${ingredientId}`);
@@ -398,6 +455,11 @@ async function editIngredient(ingredientId) {
 }
 
 async function deleteIngredient(ingredientId) {
+  if (!state.editMode) {
+    alert('Veuillez activer le mode édition pour supprimer un ingrédient.');
+    return;
+  }
+  
   const confirmed = await showConfirmDialog(
     'Cet ingrédient sera supprimé de toutes les recettes qui l\'utilisent.',
     'Supprimer cet ingrédient ?',
@@ -425,6 +487,10 @@ function setupModals() {
   
   // Ouverture nouveau plat
   document.getElementById('btn-new-plat').addEventListener('click', () => {
+    if (!state.editMode) {
+      alert('Veuillez activer le mode édition pour créer une recette.');
+      return;
+    }
     state.editingPlat = null;
     document.getElementById('modal-plat-title').textContent = 'Nouvelle Recette';
     document.getElementById('form-plat').reset();
@@ -435,6 +501,10 @@ function setupModals() {
   
   // Ouverture nouvel ingrédient
   document.getElementById('btn-new-ingredient').addEventListener('click', () => {
+    if (!state.editMode) {
+      alert('Veuillez activer le mode édition pour créer un ingrédient.');
+      return;
+    }
     state.editingIngredient = null;
     document.getElementById('form-ingredient').reset();
     document.getElementById('modal-ingredient').classList.add('active');
@@ -1230,6 +1300,11 @@ function playRecetteVideo(cheminFichier) {
 
 async function editPlat(event, platId) {
   if (event) event.stopPropagation();
+  
+  if (!state.editMode) {
+    alert('Veuillez activer le mode édition pour modifier une recette.');
+    return;
+  }
   
   try {
     // Charger les détails complets du plat
