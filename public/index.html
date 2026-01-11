@@ -29,6 +29,12 @@
         <h2>📖 Mes Recettes</h2>
         <div class="header-actions">
           <input type="text" id="search-plats" placeholder="Rechercher une recette..." class="search-input">
+          <input type="text" id="filter-ingredients" placeholder="Filtrer par ingrédient (ex: poulet)" class="search-input" style="margin-left: 0.5rem;">
+          <select id="sort-plats" class="search-input" style="margin-left: 0.5rem; width: auto;">
+            <option value="alpha">A-Z</option>
+            <option value="temps">Temps</option>
+            <option value="difficulte">Difficulté</option>
+          </select>
           <button class="btn-primary" id="btn-new-plat">➕ Nouvelle Recette</button>
         </div>
       </div>

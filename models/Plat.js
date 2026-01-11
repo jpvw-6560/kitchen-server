@@ -11,9 +11,11 @@ class Plat {
     const [rows] = await pool.query(`
       SELECT p.*, 
              COUNT(DISTINCT pi.id) as nb_ingredients,
-             m.chemin_fichier as photo_principale
+             m.chemin_fichier as photo_principale,
+             GROUP_CONCAT(DISTINCT i.nom ORDER BY i.nom SEPARATOR ', ') as ingredients_list
       FROM plats p
       LEFT JOIN plat_ingredients pi ON p.id = pi.plat_id
+      LEFT JOIN ingredients i ON pi.ingredient_id = i.id
       LEFT JOIN medias m ON p.id = m.plat_id AND m.principale = TRUE AND m.type = 'image'
       GROUP BY p.id, m.chemin_fichier
       ORDER BY p.created_at DESC

@@ -2,6 +2,12 @@
 
 const API_BASE = 'http://localhost:3002/api';
 
+// Fonction utilitaire pour formater les quantités sans décimales inutiles
+function formatQuantite(qte) {
+  if (Number.isInteger(qte)) return qte;
+  return parseFloat(qte.toFixed(2));
+}
+
 // État de l'application
 const state = {
   currentView: 'plats',
@@ -9,7 +15,8 @@ const state = {
   ingredients: [],
   config: {},
   currentWeekStart: null,
-  editingPlat: null
+  editingPlat: null,
+  editingIngredient: null
 };
 
 /**
@@ -175,6 +182,28 @@ function renderPlats(platsToRender = state.plats) {
     return;
   }
   
+  // Appliquer le tri si le select existe
+  const sortPlats = document.getElementById('sort-plats');
+  if (sortPlats) {
+    const sortBy = sortPlats.value;
+    
+    // Créer une copie pour ne pas modifier l'original
+    platsToRender = [...platsToRender];
+    
+    switch (sortBy) {
+      case 'alpha':
+        platsToRender.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+        break;
+      case 'temps':
+        platsToRender.sort((a, b) => (a.temps_preparation || 999) - (b.temps_preparation || 999));
+        break;
+      case 'difficulte':
+        const difficulteOrder = { 'Facile': 1, 'Moyen': 2, 'Difficile': 3 };
+        platsToRender.sort((a, b) => (difficulteOrder[a.difficulte] || 2) - (difficulteOrder[b.difficulte] || 2));
+        break;
+    }
+  }
+  
   container.innerHTML = platsToRender.map(plat => `
     <div class="card" onclick="viewPlatDetails(${plat.id})">
       <div class="card-header">
@@ -259,6 +288,7 @@ function renderIngredients(ingredientsToRender = state.ingredients) {
               <td>${ing.nom}</td>
               <td>${ing.unite || '-'}</td>
               <td>
+                <button class="btn-icon" onclick="editIngredient(${ing.id})" title="Modifier">✏️</button>
                 <button class="btn-icon" onclick="deleteIngredient(${ing.id})" title="Supprimer">🗑️</button>
               </td>
             </tr>
@@ -272,14 +302,39 @@ function renderIngredients(ingredientsToRender = state.ingredients) {
 // Recherche
 function setupSearchHandlers() {
   const searchPlats = document.getElementById('search-plats');
-  searchPlats.addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase();
-    const filtered = state.plats.filter(p => 
-      p.nom.toLowerCase().includes(query) || 
-      (p.description && p.description.toLowerCase().includes(query))
-    );
+  const filterIngredients = document.getElementById('filter-ingredients');
+  const sortPlats = document.getElementById('sort-plats');
+  
+  // Fonction de filtrage et tri
+  const applyFiltersAndSort = () => {
+    const searchQuery = searchPlats.value.toLowerCase().trim();
+    const ingredientFilter = filterIngredients.value.toLowerCase().trim();
+    
+    let filtered = state.plats;
+    
+    // Filtrer par nom/description
+    if (searchQuery) {
+      filtered = filtered.filter(p => 
+        p.nom.toLowerCase().includes(searchQuery) || 
+        (p.description && p.description.toLowerCase().includes(searchQuery))
+      );
+    }
+    
+    // Filtrer par ingrédient
+    if (ingredientFilter) {
+      filtered = filtered.filter(p => {
+        // Vérifier si le plat contient l'ingrédient recherché
+        return p.ingredients_list && p.ingredients_list.toLowerCase().includes(ingredientFilter);
+      });
+    }
+    
+    // Le tri est maintenant géré dans renderPlats()
     renderPlats(filtered);
-  });
+  };
+  
+  searchPlats.addEventListener('input', applyFiltersAndSort);
+  filterIngredients.addEventListener('input', applyFiltersAndSort);
+  sortPlats.addEventListener('change', applyFiltersAndSort);
   
   const searchIngredients = document.getElementById('search-ingredients');
   searchIngredients.addEventListener('input', (e) => {
@@ -321,6 +376,27 @@ async function deletePlat(event, platId) {
   }
 }
 
+async function editIngredient(ingredientId) {
+  try {
+    // Charger les données de l'ingrédient
+    const response = await fetch(`${API_BASE}/ingredients/${ingredientId}`);
+    const ingredient = await response.json();
+    
+    // Remplir le formulaire
+    document.getElementById('ingredient-nom').value = ingredient.nom;
+    document.getElementById('ingredient-unite').value = ingredient.unite || '';
+    document.getElementById('ingredient-categorie').value = ingredient.categorie || '';
+    
+    // Stocker l'ID pour l'édition
+    state.editingIngredient = ingredientId;
+    
+    // Ouvrir le modal
+    document.getElementById('modal-ingredient').classList.add('active');
+  } catch (err) {
+    console.error('Erreur chargement ingrédient:', err);
+  }
+}
+
 async function deleteIngredient(ingredientId) {
   const confirmed = await showConfirmDialog(
     'Cet ingrédient sera supprimé de toutes les recettes qui l\'utilisent.',
@@ -359,6 +435,7 @@ function setupModals() {
   
   // Ouverture nouvel ingrédient
   document.getElementById('btn-new-ingredient').addEventListener('click', () => {
+    state.editingIngredient = null;
     document.getElementById('form-ingredient').reset();
     document.getElementById('modal-ingredient').classList.add('active');
   });
@@ -552,12 +629,18 @@ function setupIngredientForm() {
     };
     
     try {
-      await fetch(`${API_BASE}/ingredients`, {
-        method: 'POST',
+      const url = state.editingIngredient 
+        ? `${API_BASE}/ingredients/${state.editingIngredient}` 
+        : `${API_BASE}/ingredients`;
+      const method = state.editingIngredient ? 'PUT' : 'POST';
+      
+      await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ingredientData)
       });
       
+      state.editingIngredient = null;
       document.getElementById('modal-ingredient').classList.remove('active');
       await loadIngredients();
     } catch (err) {
@@ -890,7 +973,8 @@ async function loadListeCourses() {
       
       Object.entries(groupedAutres).forEach(([categorie, items]) => {
         items.forEach(item => {
-          const qte = Math.round(item.quantite_totale * 100) / 100;
+          const qteRaw = Math.round(item.quantite_totale * 100) / 100;
+          const qte = formatQuantite(qteRaw);
           const unite = item.unite_recette.toLowerCase() === 'pièce' || item.unite_recette.toLowerCase() === 'pièces' ? '' : item.unite_recette;
           const texte = unite ? `${qte} ${unite} ${item.nom}` : `${qte} ${item.nom}`;
           html += `
@@ -912,7 +996,8 @@ async function loadListeCourses() {
       
       Object.entries(groupedFL).forEach(([categorie, items]) => {
         items.forEach(item => {
-          const qte = Math.round(item.quantite_totale * 100) / 100;
+          const qteRaw = Math.round(item.quantite_totale * 100) / 100;
+          const qte = formatQuantite(qteRaw);
           const unite = item.unite_recette.toLowerCase() === 'pièce' || item.unite_recette.toLowerCase() === 'pièces' ? '' : item.unite_recette;
           const texte = unite ? `${qte} ${unite} ${item.nom}` : `${qte} ${item.nom}`;
           html += `
@@ -979,7 +1064,7 @@ async function viewRecette(event, platId) {
             <ul class="recette-viewer-ingredients">
               ${plat.ingredients.map(ing => `
                 <li>
-                  <span class="ingredient-quantite">${ing.quantite} ${ing.unite}</span>
+                  <span class="ingredient-quantite">${formatQuantite(ing.quantite)} ${ing.unite}</span>
                   <span class="ingredient-nom">${ing.nom}</span>
                 </li>
               `).join('')}
@@ -1080,7 +1165,7 @@ async function viewRecette(event, platId) {
             <ul class="recette-viewer-ingredients">
               ${plat.ingredients.map(ing => `
                 <li>
-                  <span class="ingredient-quantite">${ing.quantite} ${ing.unite}</span>
+                  <span class="ingredient-quantite">${formatQuantite(ing.quantite)} ${ing.unite}</span>
                   <span class="ingredient-nom">${ing.nom}</span>
                 </li>
               `).join('')}
