@@ -6,8 +6,18 @@ const API_BASE = `${window.location.protocol}//${window.location.hostname}:3002/
 
 // Fonction utilitaire pour formater les quantités sans décimales inutiles
 function formatQuantite(qte) {
-  if (Number.isInteger(qte)) return qte;
-  return parseFloat(qte.toFixed(2));
+  // Vérifier si qte est valide
+  if (qte === null || qte === undefined || qte === '') return '0';
+  
+  // Convertir en nombre si c'est une chaîne
+  const num = typeof qte === 'string' ? parseFloat(qte) : qte;
+  
+  // Vérifier si c'est un nombre valide
+  if (isNaN(num)) return '0';
+  
+  // Formater
+  if (Number.isInteger(num)) return num;
+  return parseFloat(num.toFixed(2));
 }
 
 // État de l'application
@@ -246,7 +256,37 @@ function updateEditModeUI() {
   
   // Re-render les listes pour appliquer les changements aux boutons d'action
   if (state.currentView === 'plats') {
-    renderPlats();
+    // Utiliser applyFiltersAndSort pour maintenir le filtre actif
+    const searchPlats = document.getElementById('search-plats');
+    const filterIngredients = document.getElementById('filter-ingredients');
+    const sortPlats = document.getElementById('sort-plats');
+    
+    const searchQuery = searchPlats.value.toLowerCase().trim();
+    const ingredientFilter = filterIngredients.value.toLowerCase().trim();
+    
+    let filtered = state.plats;
+    
+    // Filtrer par type (Plat/Dessert)
+    if (state.typeFilter && state.typeFilter !== 'all') {
+      filtered = filtered.filter(p => p.type === state.typeFilter);
+    }
+    
+    // Filtrer par nom/description
+    if (searchQuery) {
+      filtered = filtered.filter(p => 
+        p.nom.toLowerCase().includes(searchQuery) || 
+        (p.description && p.description.toLowerCase().includes(searchQuery))
+      );
+    }
+    
+    // Filtrer par ingrédient
+    if (ingredientFilter) {
+      filtered = filtered.filter(p => {
+        return p.ingredients_list && p.ingredients_list.toLowerCase().includes(ingredientFilter);
+      });
+    }
+    
+    renderPlats(filtered);
   } else if (state.currentView === 'ingredients') {
     renderIngredients();
   }
@@ -684,6 +724,37 @@ function setupPlatForm() {
       
       document.getElementById('modal-plat').classList.remove('active');
       await loadPlats();
+      
+      // Réappliquer le filtre actif après rechargement
+      const searchPlats = document.getElementById('search-plats');
+      const filterIngredients = document.getElementById('filter-ingredients');
+      
+      const searchQuery = searchPlats.value.toLowerCase().trim();
+      const ingredientFilter = filterIngredients.value.toLowerCase().trim();
+      
+      let filtered = state.plats;
+      
+      // Filtrer par type (Plat/Dessert)
+      if (state.typeFilter && state.typeFilter !== 'all') {
+        filtered = filtered.filter(p => p.type === state.typeFilter);
+      }
+      
+      // Filtrer par nom/description
+      if (searchQuery) {
+        filtered = filtered.filter(p => 
+          p.nom.toLowerCase().includes(searchQuery) || 
+          (p.description && p.description.toLowerCase().includes(searchQuery))
+        );
+      }
+      
+      // Filtrer par ingrédient
+      if (ingredientFilter) {
+        filtered = filtered.filter(p => {
+          return p.ingredients_list && p.ingredients_list.toLowerCase().includes(ingredientFilter);
+        });
+      }
+      
+      renderPlats(filtered);
     } catch (err) {
       console.error('Erreur sauvegarde plat:', err);
       showNotification('Erreur lors de la sauvegarde', 'error');
@@ -763,16 +834,53 @@ function addIngredientRow() {
 
 function addPreparationRow() {
   const container = document.getElementById('plat-preparations-list');
-  const ordre = container.children.length + 1;
   const row = document.createElement('div');
   row.className = 'preparation-row';
   row.innerHTML = `
-    <span style="font-weight: 600; width: 30px;">${ordre}.</span>
+    <span class="step-number" style="font-weight: 600; width: 30px;"></span>
     <textarea placeholder="Description de l'étape..." rows="2"></textarea>
     <input type="number" placeholder="⏱ min" style="width: 80px;" min="0">
-    <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+    <div style="display: flex; gap: 0.25rem;">
+      <button type="button" class="btn-move-up" title="Déplacer vers le haut" onclick="movePreparationUp(this.closest('.preparation-row'))">↑</button>
+      <button type="button" class="btn-move-down" title="Déplacer vers le bas" onclick="movePreparationDown(this.closest('.preparation-row'))">↓</button>
+      <button type="button" class="btn-remove" title="Supprimer cette étape" onclick="removePreparationRow(this.closest('.preparation-row'))">✕</button>
+    </div>
   `;
+  
   container.appendChild(row);
+  renumberPreparationSteps();
+}
+
+function movePreparationUp(row) {
+  const previousRow = row.previousElementSibling;
+  if (previousRow && previousRow.classList.contains('preparation-row')) {
+    row.parentNode.insertBefore(row, previousRow);
+    renumberPreparationSteps();
+  }
+}
+
+function movePreparationDown(row) {
+  const nextRow = row.nextElementSibling;
+  if (nextRow && nextRow.classList.contains('preparation-row')) {
+    row.parentNode.insertBefore(nextRow, row);
+    renumberPreparationSteps();
+  }
+}
+
+function removePreparationRow(row) {
+  row.remove();
+  renumberPreparationSteps();
+}
+
+function renumberPreparationSteps() {
+  const container = document.getElementById('plat-preparations-list');
+  const rows = container.querySelectorAll('.preparation-row');
+  rows.forEach((row, index) => {
+    const stepNumber = row.querySelector('.step-number');
+    if (stepNumber) {
+      stepNumber.textContent = `${index + 1}.`;
+    }
+  });
 }
 
 // Formulaire ingrédient
@@ -1477,10 +1585,14 @@ async function editPlat(event, platId) {
         const row = document.createElement('div');
         row.className = 'preparation-row';
         row.innerHTML = `
-          <span style="font-weight: 600; width: 30px;">${index + 1}.</span>
+          <span class="step-number" style="font-weight: 600; width: 30px;">${index + 1}.</span>
           <textarea placeholder="Description de l'étape..." rows="2">${prep.description || ''}</textarea>
           <input type="number" placeholder="⏱ min" style="width: 80px;" min="0" value="${prep.duree_minutes || ''}">
-          <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+          <div style="display: flex; gap: 0.25rem;">
+            <button type="button" class="btn-move-up" title="Déplacer vers le haut" onclick="movePreparationUp(this.closest('.preparation-row'))">↑</button>
+            <button type="button" class="btn-move-down" title="Déplacer vers le bas" onclick="movePreparationDown(this.closest('.preparation-row'))">↓</button>
+            <button type="button" class="btn-remove" title="Supprimer cette étape" onclick="removePreparationRow(this.closest('.preparation-row'))">✕</button>
+          </div>
         `;
         preparationsContainer.appendChild(row);
       });
@@ -1856,7 +1968,13 @@ async function saveMenu() {
 async function deleteMenu(dateStr) {
   console.log("Tentative de suppression pour la date:", dateStr);
   
-  if (!confirm("Voulez-vous vraiment supprimer ce menu ?")) return;
+  const confirmed = await showConfirmDialog(
+    "Voulez-vous vraiment supprimer ce menu ?",
+    "Supprimer le menu",
+    "🗑️"
+  );
+  
+  if (!confirmed) return;
   
   try {
     const response = await fetch(`${API_BASE}/menus/${dateStr}`, {
@@ -1880,7 +1998,13 @@ async function deleteMenu(dateStr) {
  * Supprime tous les menus de la semaine affichée
  */
 async function clearWeek() {
-  if (!confirm("Voulez-vous vraiment vider tous les menus de cette semaine ?")) return;
+  const confirmed = await showConfirmDialog(
+    "Voulez-vous vraiment vider tous les menus de cette semaine ?",
+    "Vider la semaine",
+    "⚠️"
+  );
+  
+  if (!confirmed) return;
   
   try {
     // Générer les 7 dates de la semaine

@@ -147,6 +147,37 @@ input:disabled + .slider {
 /* Conteneur principal */
 .container {
   max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 2rem 2rem 2rem;
+}
+
+/* Vues (sections principales) */
+.view {
+  display: none;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.view.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* En-tête de vue */
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.view-header h2 {
+  margin: 0;
+}
+
 .header-actions {
   display: flex;
   gap: 1rem;
@@ -623,6 +654,30 @@ tbody tr:hover {
 
 .btn-remove:hover {
   background: #dc2626;
+}
+
+.btn-move-up,
+.btn-move-down {
+  padding: 0.4rem 0.6rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.btn-move-up:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+
+.btn-move-down:hover {
+  background: #2563eb;
+  transform: translateY(2px);
 }
 
 /* Quick Form Overlay */
