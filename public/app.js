@@ -1,6 +1,8 @@
 // app.js - Application Cuisine Server
 
-const API_BASE = 'http://localhost:3002/api';
+// Utilise l'origine actuelle au lieu de localhost codé en dur
+// Cela permettra au client de fonctionner depuis n'importe quel appareil
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:3002/api`;
 
 // Fonction utilitaire pour formater les quantités sans décimales inutiles
 function formatQuantite(qte) {
@@ -77,6 +79,39 @@ async function showConfirmDialog(message, title = 'Confirmation', icon = '⚠️
       }
     });
   });
+}
+
+/**
+ * Affiche une notification moderne (toast)
+ * @param {string} message - Le message à afficher
+ * @param {string} type - Type : 'info', 'success', 'warning', 'error' (défaut: 'info')
+ * @param {number} duration - Durée d'affichage en ms (défaut: 3000)
+ */
+function showNotification(message, type = 'info', duration = 3000) {
+  const icons = {
+    info: 'ℹ️',
+    success: '✅',
+    warning: '⚠️',
+    error: '❌'
+  };
+  
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.innerHTML = `
+    <span class="notification-icon">${icons[type]}</span>
+    <span class="notification-message">${message}</span>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Animation d'entrée
+  setTimeout(() => notification.classList.add('show'), 10);
+  
+  // Suppression automatique
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => document.body.removeChild(notification), 300);
+  }, duration);
 }
 
 // Initialisation
@@ -408,7 +443,7 @@ async function deletePlat(event, platId) {
   event.stopPropagation();
   
   if (!state.editMode) {
-    alert('Veuillez activer le mode édition pour supprimer une recette.');
+    showNotification('Veuillez activer le mode édition pour supprimer une recette.', 'warning');
     return;
   }
   
@@ -430,7 +465,7 @@ async function deletePlat(event, platId) {
 
 async function editIngredient(ingredientId) {
   if (!state.editMode) {
-    alert('Veuillez activer le mode édition pour modifier un ingrédient.');
+    showNotification('Veuillez activer le mode édition pour modifier un ingrédient.', 'warning');
     return;
   }
   
@@ -456,7 +491,7 @@ async function editIngredient(ingredientId) {
 
 async function deleteIngredient(ingredientId) {
   if (!state.editMode) {
-    alert('Veuillez activer le mode édition pour supprimer un ingrédient.');
+    showNotification('Veuillez activer le mode édition pour supprimer un ingrédient.', 'warning');
     return;
   }
   
@@ -481,14 +516,48 @@ function setupModals() {
   // Fermeture des modals
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => {
-      btn.closest('.modal').classList.remove('active');
+      const modal = btn.closest('.modal');
+      // Support pour les deux systèmes : classe 'active' et style.display
+      if (modal.classList.contains('active')) {
+        modal.classList.remove('active');
+      } else {
+        modal.style.display = 'none';
+      }
     });
+  });
+  
+  // Fermeture en cliquant sur l'overlay (fond)
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        if (modal.classList.contains('active')) {
+          modal.classList.remove('active');
+        } else {
+          modal.style.display = 'none';
+        }
+      }
+    });
+  });
+  
+  // Fermeture avec la touche Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal').forEach(modal => {
+        if (modal.classList.contains('active') || modal.style.display === 'flex') {
+          if (modal.classList.contains('active')) {
+            modal.classList.remove('active');
+          } else {
+            modal.style.display = 'none';
+          }
+        }
+      });
+    }
   });
   
   // Ouverture nouveau plat
   document.getElementById('btn-new-plat').addEventListener('click', () => {
     if (!state.editMode) {
-      alert('Veuillez activer le mode édition pour créer une recette.');
+      showNotification('Veuillez activer le mode édition pour créer une recette.', 'warning');
       return;
     }
     state.editingPlat = null;
@@ -502,7 +571,7 @@ function setupModals() {
   // Ouverture nouvel ingrédient
   document.getElementById('btn-new-ingredient').addEventListener('click', () => {
     if (!state.editMode) {
-      alert('Veuillez activer le mode édition pour créer un ingrédient.');
+      showNotification('Veuillez activer le mode édition pour créer un ingrédient.', 'warning');
       return;
     }
     state.editingIngredient = null;
@@ -596,7 +665,7 @@ function setupPlatForm() {
       await loadPlats();
     } catch (err) {
       console.error('Erreur sauvegarde plat:', err);
-      alert('Erreur lors de la sauvegarde');
+      showNotification('Erreur lors de la sauvegarde', 'error');
     }
   });
   
@@ -621,7 +690,7 @@ function setupPlatForm() {
     
     // Vérifier qu'on est en mode édition (sinon il faut sauvegarder le plat d'abord)
     if (!state.editingPlat) {
-      alert('⚠️ Veuillez d\'abord enregistrer la recette avant d\'ajouter des médias');
+      showNotification('Veuillez d\'abord enregistrer la recette avant d\'ajouter des médias', 'warning');
       e.target.value = '';
       return;
     }
@@ -715,7 +784,7 @@ function setupIngredientForm() {
       await loadIngredients();
     } catch (err) {
       console.error('Erreur sauvegarde ingrédient:', err);
-      alert('Erreur lors de la sauvegarde');
+      showNotification('Erreur lors de la sauvegarde', 'error');
     }
   });
 }
@@ -791,7 +860,7 @@ async function showQuickIngredientForm() {
         resolve({ id: result.id, ...ingredientData });
       } catch (err) {
         console.error('Erreur création ingrédient:', err);
-        alert('Erreur lors de la création de l\'ingrédient');
+        showNotification('Erreur lors de la création de l\'ingrédient', 'error');
         document.body.removeChild(overlay);
         resolve(null);
       }
@@ -1169,7 +1238,7 @@ async function viewRecette(event, platId) {
     document.body.style.overflow = 'hidden';
   } catch (err) {
     console.error('Erreur chargement recette:', err);
-    alert('Erreur lors du chargement de la recette');
+    showNotification('Erreur lors du chargement de la recette', 'error');
   }
 }
 
@@ -1270,7 +1339,7 @@ async function viewRecette(event, platId) {
     document.body.style.overflow = 'hidden';
   } catch (err) {
     console.error('Erreur chargement recette:', err);
-    alert('Erreur lors du chargement de la recette');
+    showNotification('Erreur lors du chargement de la recette', 'error');
   }
 }
 
@@ -1302,7 +1371,7 @@ async function editPlat(event, platId) {
   if (event) event.stopPropagation();
   
   if (!state.editMode) {
-    alert('Veuillez activer le mode édition pour modifier une recette.');
+    showNotification('Veuillez activer le mode édition pour modifier une recette.', 'warning');
     return;
   }
   
@@ -1402,7 +1471,7 @@ async function editPlat(event, platId) {
     document.getElementById('modal-plat').classList.add('active');
   } catch (err) {
     console.error('Erreur chargement plat pour édition:', err);
-    alert('Erreur lors du chargement de la recette');
+    showNotification('Erreur lors du chargement de la recette', 'error');
   }
 }
 
@@ -1487,7 +1556,7 @@ async function uploadMediaFiles(platId, files) {
     // Recharger les médias
     await loadMediasForPlat(platId);
   } catch (err) {
-    alert('Erreur lors de l\'upload de certains fichiers');
+    showNotification('Erreur lors de l\'upload de certains fichiers', 'error');
   }
 }
 
@@ -1516,7 +1585,7 @@ async function deleteMedia(mediaId) {
     await loadMediasForPlat(state.editingPlat);
   } catch (err) {
     console.error('Erreur suppression média:', err);
-    alert('Erreur lors de la suppression du média');
+    showNotification('Erreur lors de la suppression du média', 'error');
   }
 }
 
@@ -1559,7 +1628,7 @@ async function setPrincipale(mediaId, event) {
     await loadPlats();
   } catch (err) {
     console.error('Erreur setPrincipale:', err);
-    alert('Erreur lors de la définition de la photo principale');
+    showNotification('Erreur lors de la définition de la photo principale', 'error');
   }
 }
 // ============================================
@@ -1674,7 +1743,7 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
     }
   }
   
-  modal.style.display = "flex";
+  modal.classList.add('active');
   
   // Focus sur le champ de recherche
   setTimeout(() => document.getElementById("menu-search").focus(), 100);
@@ -1726,7 +1795,7 @@ function selectPlatForMenu(id, nom, temps, difficulte) {
  */
 async function saveMenu() {
   if (!selectedPlatForMenu) {
-    alert("Veuillez sélectionner une recette");
+    showNotification("Veuillez sélectionner une recette", "warning");
     return;
   }
   
@@ -1750,12 +1819,12 @@ async function saveMenu() {
     
     if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
     
-    document.getElementById("modal-menu").style.display = "none";
+    document.getElementById("modal-menu").classList.remove('active');
     await loadCalendrierSemaine();
     
   } catch (err) {
     console.error("Erreur sauvegarde menu:", err);
-    alert("Erreur lors de la sauvegarde du menu");
+    showNotification("Erreur lors de la sauvegarde du menu", "error");
   }
 }
 
@@ -1776,12 +1845,12 @@ async function deleteMenu(dateStr) {
     
     if (!response.ok) throw new Error("Erreur lors de la suppression");
     
-    document.getElementById("modal-menu").style.display = "none";
+    document.getElementById("modal-menu").classList.remove('active');
     await loadCalendrierSemaine();
     
   } catch (err) {
     console.error("Erreur suppression menu:", err);
-    alert("Erreur lors de la suppression du menu");
+    showNotification("Erreur lors de la suppression du menu", "error");
   }
 }
 
@@ -1811,7 +1880,7 @@ async function clearWeek() {
     
   } catch (err) {
     console.error("Erreur vidage semaine:", err);
-    alert("Erreur lors du vidage de la semaine");
+    showNotification("Erreur lors du vidage de la semaine", "error");
   }
 }
 

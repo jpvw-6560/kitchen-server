@@ -1,4 +1,4 @@
-# Changelog - Receip Server
+# Changelog - Recipe Server
 
 ## [11 Janvier 2026] - Ajout de la gestion des médias
 
@@ -65,6 +65,6 @@ Pour ajouter des médias :
 ## [10 Janvier 2026] - Changement de nom
 
 ### Renommage
-- "Cuisine Server - Gestion de Recettes" → **"Receip Server"**
-- Logo navbar : "👨‍🍳 Receip Server"
-- Titre page : "Receip Server"
+- "Cuisine Server - Gestion de Recettes" → **"Recipe Server"**
+- Logo navbar : "👨‍🍳 Recipe Server"
+- Titre page : "Recipe Server"

@@ -52,9 +52,10 @@ async function startServer() {
     await initDatabase();
     console.log('✅ Base de données prête');
     
-    app.listen(config.port, () => {
-      console.log(`\n🚀 Serveur Cuisine démarré sur http://localhost:${config.port}`);
-      console.log(`📊 API disponible sur http://localhost:${config.port}/api`);
+    // Écoute sur toutes les interfaces (0.0.0.0) pour permettre l'accès distant
+    app.listen(config.port, '0.0.0.0', () => {
+      console.log(`\n🚀 Serveur Cuisine démarré sur http://0.0.0.0:${config.port}`);
+      console.log(`📊 API disponible localement sur http://localhost:${config.port}/api`);
       console.log(`📁 Uploads dans: ${config.uploadDir}\n`);
     });
   } catch (err) {

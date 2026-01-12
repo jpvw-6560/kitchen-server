@@ -1,4 +1,4 @@
-# Tests - Receip Server
+# Tests - Recipe Server
 
 ## ✅ Checklist de vérification
 
