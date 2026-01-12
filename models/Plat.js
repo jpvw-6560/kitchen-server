@@ -119,10 +119,10 @@ class Plat {
    * Crée un nouveau plat
    */
   static async create(platData) {
-    const { nom, description, temps_preparation, difficulte, conseils_chef, nombre_personnes } = platData;
+    const { nom, description, type, temps_preparation, difficulte, conseils_chef, nombre_personnes } = platData;
     const [result] = await pool.query(
-      'INSERT INTO plats (nom, description, temps_preparation, difficulte, conseils_chef, nombre_personnes) VALUES (?, ?, ?, ?, ?, ?)',
-      [nom, description, temps_preparation, difficulte, conseils_chef, nombre_personnes]
+      'INSERT INTO plats (nom, description, type, temps_preparation, difficulte, conseils_chef, nombre_personnes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [nom, description, type || 'Plat', temps_preparation, difficulte, conseils_chef, nombre_personnes]
     );
     return result.insertId;
   }
@@ -131,10 +131,10 @@ class Plat {
    * Met à jour un plat
    */
   static async update(id, platData) {
-    const { nom, description, temps_preparation, difficulte, conseils_chef, nombre_personnes, favori } = platData;
+    const { nom, description, type, temps_preparation, difficulte, conseils_chef, nombre_personnes, favori } = platData;
     await pool.query(
-      'UPDATE plats SET nom = ?, description = ?, temps_preparation = ?, difficulte = ?, conseils_chef = ?, nombre_personnes = ?, favori = ? WHERE id = ?',
-      [nom, description, temps_preparation, difficulte, conseils_chef, nombre_personnes, favori, id]
+      'UPDATE plats SET nom = ?, description = ?, type = ?, temps_preparation = ?, difficulte = ?, conseils_chef = ?, nombre_personnes = ?, favori = ? WHERE id = ?',
+      [nom, description, type || 'Plat', temps_preparation, difficulte, conseils_chef, nombre_personnes, favori, id]
     );
     return true;
   }

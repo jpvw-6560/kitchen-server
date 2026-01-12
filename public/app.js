@@ -19,7 +19,8 @@ const state = {
   currentWeekStart: null,
   editingPlat: null,
   editingIngredient: null,
-  editMode: false  // Mode édition désactivé par défaut
+  editMode: false,  // Mode édition désactivé par défaut
+  typeFilter: 'all'  // Filtre type: 'all', 'Plat', 'Dessert'
 };
 
 /**
@@ -287,6 +288,7 @@ function renderPlats(platsToRender = state.plats) {
       <div class="card-header">
         <h3 class="card-title">${plat.nom}</h3>
         <div class="card-header-right">
+          <span class="card-badge badge-type">${plat.type === 'Dessert' ? '🍰 Dessert' : '🍽️ Plat'}</span>
           <span class="card-badge badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
           ${plat.photo_principale ? `<img src="/${plat.photo_principale}" alt="${plat.nom}" class="card-photo">` : ''}
         </div>
@@ -387,12 +389,17 @@ function setupSearchHandlers() {
   const filterIngredients = document.getElementById('filter-ingredients');
   const sortPlats = document.getElementById('sort-plats');
   
-  // Fonction de filtrage et tri
+  // Fonction de filtrage et tri (déclarée AVANT d'être utilisée)
   const applyFiltersAndSort = () => {
     const searchQuery = searchPlats.value.toLowerCase().trim();
     const ingredientFilter = filterIngredients.value.toLowerCase().trim();
     
     let filtered = state.plats;
+    
+    // Filtrer par type (Plat/Dessert)
+    if (state.typeFilter && state.typeFilter !== 'all') {
+      filtered = filtered.filter(p => p.type === state.typeFilter);
+    }
     
     // Filtrer par nom/description
     if (searchQuery) {
@@ -413,6 +420,19 @@ function setupSearchHandlers() {
     // Le tri est maintenant géré dans renderPlats()
     renderPlats(filtered);
   };
+  
+  // Gestion des boutons de filtre type
+  document.querySelectorAll('.btn-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Retirer la classe active de tous les boutons
+      document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+      // Ajouter la classe active au bouton cliqué
+      btn.classList.add('active');
+      // Mettre à jour le filtre
+      state.typeFilter = btn.dataset.type;
+      applyFiltersAndSort();
+    });
+  });
   
   searchPlats.addEventListener('input', applyFiltersAndSort);
   filterIngredients.addEventListener('input', applyFiltersAndSort);
@@ -591,6 +611,7 @@ function setupPlatForm() {
     const platData = {
       nom: document.getElementById('plat-nom').value,
       description: document.getElementById('plat-description').value,
+      type: document.getElementById('plat-type').value,
       temps_preparation: parseInt(document.getElementById('plat-temps').value) || null,
       difficulte: document.getElementById('plat-difficulte').value,
       conseils_chef: document.getElementById('plat-conseils').value,
@@ -1387,6 +1408,7 @@ async function editPlat(event, platId) {
     document.getElementById('modal-plat-title').textContent = 'Modifier la Recette';
     document.getElementById('plat-nom').value = plat.nom || '';
     document.getElementById('plat-description').value = plat.description || '';
+    document.getElementById('plat-type').value = plat.type || 'Plat';
     document.getElementById('plat-temps').value = plat.temps_preparation || '';
     document.getElementById('plat-difficulte').value = plat.difficulte || 'Moyen';
     document.getElementById('plat-conseils').value = plat.conseils_chef || '';

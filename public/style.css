@@ -147,35 +147,40 @@ input:disabled + .slider {
 /* Conteneur principal */
 .container {
   max-width: 1400px;
-  margin: 2rem auto;
-  padding: 0 2rem;
-}
-
-/* Vues */
-.view {
-  display: none;
-}
-
-.view.active {
-  display: block;
-}
-
-.view-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.view-header h2 {
-  font-size: 2rem;
-  color: var(--text-primary);
-}
-
 .header-actions {
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+
+/* Filtres de type (Plats/Desserts) */
+.type-filter {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-filter {
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.btn-filter:hover {
+  background: var(--bg-primary);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-filter.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }
 
 /* Inputs */
@@ -306,6 +311,12 @@ input:disabled + .slider {
 .badge-difficile {
   background: #7f1d1d;
   color: #fca5a5;
+}
+
+.badge-type {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-right: 0.5rem;
 }
 
 .card-description {

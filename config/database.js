@@ -29,6 +29,7 @@ async function initDatabase() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         nom VARCHAR(200) NOT NULL,
         description TEXT,
+        type ENUM('Plat', 'Dessert') DEFAULT 'Plat',
         temps_preparation INT,
         difficulte ENUM('Facile', 'Moyen', 'Difficile') DEFAULT 'Moyen',
         conseils_chef TEXT,
@@ -37,9 +38,19 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_nom (nom),
+        INDEX idx_type (type),
         INDEX idx_favori (favori)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    
+    // Ajouter la colonne type si elle n'existe pas déjà (migration)
+    try {
+      await connection.query(`
+        ALTER TABLE plats ADD COLUMN type ENUM('Plat', 'Dessert') DEFAULT 'Plat' AFTER description
+      `);
+    } catch (err) {
+      // Ignorer si la colonne existe déjà
+    }
     
     // Table des ingrédients
     await connection.query(`
