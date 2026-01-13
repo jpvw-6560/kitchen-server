@@ -105,14 +105,35 @@
 
     <!-- Vue Ingrédients -->
     <div class="view" id="view-ingredients">
-      <div class="view-header">
-        <h2>🥕 Ingrédients</h2>
-        <div class="header-actions">
-          <input type="text" id="search-ingredients" placeholder="Rechercher un ingrédient..." class="search-input">
-          <button class="btn-primary" id="btn-new-ingredient">➕ Nouvel Ingrédient</button>
+      <!-- Sidebar fixe avec recherche -->
+      <aside class="ingredients-sidebar">
+        <h3>🔍 Recherche</h3>
+        
+        <div class="sidebar-section">
+          <label for="search-ingredients">Nom d'ingrédient</label>
+          <input type="text" id="search-ingredients" placeholder="Rechercher..." class="search-input">
         </div>
+
+        <div class="sidebar-section">
+          <button class="btn-primary btn-fullwidth" id="btn-new-ingredient">➕ Nouvel Ingrédient</button>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+        <h3>📂 Catégories</h3>
+        
+        <div class="sidebar-section">
+          <button class="btn-secondary btn-fullwidth" id="btn-manage-categories">⚙️ Gérer les catégories</button>
+        </div>
+      </aside>
+
+      <!-- Contenu principal avec la table -->
+      <div class="ingredients-content">
+        <div class="view-header">
+          <h2>🥕 Ingrédients</h2>
+        </div>
+        <div id="ingredients-list" class="table-container"></div>
       </div>
-      <div id="ingredients-list" class="table-container"></div>
     </div>
 
     <!-- Vue Favoris -->
@@ -234,6 +255,21 @@
           <button type="button" class="btn-secondary modal-close">Annuler</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Gestion des Catégories -->
+  <div class="modal" id="modal-categories">
+    <div class="modal-content">
+      <span class="modal-close">&times;</span>
+      <h2>📂 Gérer les catégories</h2>
+      <div style="margin-bottom: 1.5rem;">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+          <input type="text" id="new-category-name" placeholder="Nouvelle catégorie..." class="search-input" style="flex: 1;">
+          <button type="button" class="btn-primary" id="btn-add-category">➕ Ajouter</button>
+        </div>
+      </div>
+      <div id="categories-list" style="max-height: 400px; overflow-y: auto;"></div>
     </div>
   </div>
 

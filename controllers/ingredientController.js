@@ -2,6 +2,7 @@
 // Contrôleur pour les ingrédients
 
 const Ingredient = require('../models/Ingredient');
+const Categorie = require('../models/Categorie');
 
 /**
  * Récupère tous les ingrédients
@@ -110,6 +111,73 @@ async function deleteIngredient(req, res) {
   }
 }
 
+/**
+ * Récupère toutes les catégories
+ */
+async function getCategories(req, res) {
+  try {
+    const categories = await Categorie.getAll();
+    res.json(categories.map(c => c.nom));
+  } catch (err) {
+    console.error('Erreur getCategories:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * Crée une nouvelle catégorie
+ */
+async function createCategorie(req, res) {
+  try {
+    const { nom } = req.body;
+    if (!nom || nom.trim() === '') {
+      return res.status(400).json({ error: 'Le nom de la catégorie est requis' });
+    }
+    
+    // Vérifier si la catégorie existe déjà
+    const existing = await Categorie.getByName(nom.trim());
+    if (existing) {
+      return res.status(409).json({ error: 'Cette catégorie existe déjà' });
+    }
+    
+    const id = await Categorie.create(nom.trim());
+    res.status(201).json({ id, message: 'Catégorie créée avec succès' });
+  } catch (err) {
+    console.error('Erreur createCategorie:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * Renomme une catégorie
+ */
+async function renameCategorie(req, res) {
+  try {
+    const { newName } = req.body;
+    if (!newName) {
+      return res.status(400).json({ error: 'Le nouveau nom est requis' });
+    }
+    await Categorie.rename(req.params.oldName, newName);
+    res.json({ message: 'Catégorie renommée avec succès' });
+  } catch (err) {
+    console.error('Erreur renameCategorie:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * Supprime une catégorie
+ */
+async function deleteCategorie(req, res) {
+  try {
+    await Categorie.deleteByName(req.params.name);
+    res.json({ message: 'Catégorie supprimée avec succès' });
+  } catch (err) {
+    console.error('Erreur deleteCategorie:', err);
+    res.status(400).json({ error: err.message || 'Erreur serveur' });
+  }
+}
+
 module.exports = {
   getAllIngredients,
   getIngredientById,
@@ -117,5 +185,9 @@ module.exports = {
   getByCategorie,
   createIngredient,
   updateIngredient,
-  deleteIngredient
+  deleteIngredient,
+  getCategories,
+  createCategorie,
+  renameCategorie,
+  deleteCategorie
 };

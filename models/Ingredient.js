@@ -97,6 +97,58 @@ class Ingredient {
     const [rows] = await pool.query('SELECT id FROM ingredients WHERE LOWER(nom) = LOWER(?)', [nom]);
     return rows.length > 0 ? rows[0] : null;
   }
+
+  /**
+   * Récupère toutes les catégories distinctes
+   */
+  static async getCategories() {
+    const [rows] = await pool.query(`
+      SELECT DISTINCT categorie 
+      FROM ingredients 
+      WHERE categorie IS NOT NULL AND categorie != ''
+      ORDER BY categorie
+    `);
+    return rows.map(row => row.categorie);
+  }
+
+  /**
+   * Renomme une catégorie
+   */
+  static async renameCategorie(oldName, newName) {
+    await pool.query(
+      'UPDATE ingredients SET categorie = ? WHERE categorie = ?',
+      [newName, oldName]
+    );
+    return true;
+  }
+
+  /**
+   * Supprime une catégorie (met à null)
+   */
+  static async deleteCategorie(categorie) {
+    // Vérifier si la catégorie est utilisée
+    const [count] = await pool.query(
+      'SELECT COUNT(*) as count FROM ingredients WHERE categorie = ?',
+      [categorie]
+    );
+    
+    if (count[0].count > 0) {
+      throw new Error('Cette catégorie contient des ingrédients et ne peut pas être supprimée');
+    }
+    
+    return true;
+  }
+
+  /**
+   * Compte les ingrédients par catégorie
+   */
+  static async countByCategorie(categorie) {
+    const [rows] = await pool.query(
+      'SELECT COUNT(*) as count FROM ingredients WHERE categorie = ?',
+      [categorie]
+    );
+    return rows[0].count;
+  }
 }
 
 module.exports = Ingredient;

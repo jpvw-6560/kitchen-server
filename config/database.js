@@ -135,6 +135,33 @@ async function initDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
+    // Table des catégories (nouvelle)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nom VARCHAR(255) NOT NULL UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    
+    // Migrer les catégories existantes depuis ingredients (si la table vient d'être créée)
+    const [existingCategories] = await connection.query(`
+      SELECT DISTINCT categorie 
+      FROM ingredients 
+      WHERE categorie IS NOT NULL AND categorie != ''
+    `);
+    
+    for (const row of existingCategories) {
+      try {
+        await connection.query(
+          'INSERT IGNORE INTO categories (nom) VALUES (?)',
+          [row.categorie]
+        );
+      } catch (err) {
+        // Ignorer si déjà existant
+      }
+    }
+    
     connection.release();
     console.log('✅ Base de données initialisée avec succès');
   } catch (err) {
