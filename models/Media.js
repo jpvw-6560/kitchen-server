@@ -46,18 +46,26 @@ class Media {
   }
   
   /**
-   * Supprime un média et son fichier
+   * Supprime un média et son fichier (uniquement si non utilisé ailleurs)
    */
   static async delete(id) {
     // Récupérer le chemin du fichier avant suppression
     const media = await this.getById(id);
     if (media) {
-      try {
-        // Supprimer le fichier physique
-        const filePath = path.join(__dirname, '..', media.chemin_fichier);
-        await fs.unlink(filePath);
-      } catch (err) {
-        console.error('Erreur suppression fichier:', err);
+      // Vérifier si le fichier est utilisé par d'autres recettes
+      const [otherUses] = await pool.query(
+        'SELECT COUNT(*) as count FROM medias WHERE chemin_fichier = ? AND id != ?',
+        [media.chemin_fichier, id]
+      );
+      
+      // Ne supprimer le fichier physique que s'il n'est utilisé nulle part ailleurs
+      if (otherUses[0].count === 0) {
+        try {
+          const filePath = path.join(__dirname, '..', media.chemin_fichier);
+          await fs.unlink(filePath);
+        } catch (err) {
+          console.error('Erreur suppression fichier:', err);
+        }
       }
     }
     

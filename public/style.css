@@ -146,9 +146,8 @@ input:disabled + .slider {
 
 /* Conteneur principal */
 .container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1rem 2rem 2rem 2rem;
+  margin: 0;
+  padding: 1rem 0 2rem 0;
 }
 
 /* Vues (sections principales) */
@@ -278,6 +277,71 @@ input:disabled + .slider {
   gap: 1.5rem;
 }
 
+/* Layout avec sidebar fixe pour la vue recettes */
+#view-plats {
+  display: flex;
+  gap: 2rem;
+}
+
+.recettes-sidebar {
+  position: fixed;
+  left: 0;
+  top: 80px; /* Hauteur de la navbar */
+  width: 280px;
+  height: calc(100vh - 80px);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.recettes-sidebar h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-section {
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-section label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-section .type-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-section .btn-filter {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0.75rem 1rem;
+}
+
+.sidebar-section .search-input,
+.sidebar-section .btn-fullwidth {
+  width: 100%;
+}
+
+.btn-fullwidth {
+  width: 100%;
+}
+
+.recettes-content {
+  margin-left: 280px;
+  flex: 1;
+  padding: 0 2rem;
+  width: calc(100% - 280px);
+}
+
 .card {
   background: var(--bg-secondary);
   border-radius: var(--radius);
@@ -295,16 +359,16 @@ input:disabled + .slider {
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
   gap: 1rem;
 }
 
 .card-header-right {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .card-title {
@@ -312,14 +376,16 @@ input:disabled + .slider {
   font-weight: 700;
   color: var(--text-primary);
   flex: 1;
+  margin: 0;
 }
 
 .card-photo {
-  width: 80px;
-  height: 80px;
+  width: 100%;
+  height: 150px;
   object-fit: cover;
   border-radius: 8px;
   border: 2px solid var(--border);
+  margin-bottom: 1rem;
 }
 
 .card-badge {
@@ -832,6 +898,31 @@ tbody tr:hover {
 }
 
 /* Responsive */
+@media (max-width: 968px) {
+  /* Sur tablette et mobile, la sidebar devient horizontale en haut */
+  .recettes-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .recettes-content {
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  #view-plats {
+    flex-direction: column;
+  }
+
+  .sidebar-section .type-filter {
+    flex-direction: row;
+  }
+}
+
 @media (max-width: 768px) {
   .nav-container {
     flex-direction: column;

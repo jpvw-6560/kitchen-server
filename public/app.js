@@ -330,9 +330,9 @@ function renderPlats(platsToRender = state.plats) {
         <div class="card-header-right">
           <span class="card-badge badge-type">${plat.type === 'Dessert' ? '🍰 Dessert' : '🍽️ Plat'}</span>
           <span class="card-badge badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
-          ${plat.photo_principale ? `<img src="/${plat.photo_principale}" alt="${plat.nom}" class="card-photo">` : ''}
         </div>
       </div>
+      ${plat.photo_principale ? `<img src="/${plat.photo_principale}" alt="${plat.nom}" class="card-photo">` : ''}
       ${plat.description ? `<p class="card-description">${plat.description}</p>` : ''}
       <div class="card-meta">
         ${plat.temps_preparation ? `<span>⏱ ${plat.temps_preparation} min</span>` : ''}
@@ -345,7 +345,7 @@ function renderPlats(platsToRender = state.plats) {
                 onclick="toggleFavori(event, ${plat.id})" 
                 title="Favori">⭐</button>
         <button class="btn-icon" onclick="duplicatePlat(event, ${plat.id})" title="Dupliquer" 
-                ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>📋</button>
+                ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>�</button>
         <button class="btn-icon" onclick="editPlat(event, ${plat.id})" title="Modifier" 
                 ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
         <button class="btn-icon" onclick="deletePlat(event, ${plat.id})" title="Supprimer" 

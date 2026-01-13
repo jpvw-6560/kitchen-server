@@ -32,26 +32,50 @@
     
     <!-- Vue Recettes -->
     <div class="view active" id="view-plats">
-      <div class="view-header">
-        <h2>📖 Mes Recettes</h2>
-        <div class="header-actions">
-          <!-- Filtres type Plats/Desserts -->
-          <div class="type-filter" style="display: flex; gap: 0.5rem; margin-right: 1rem;">
+      <!-- Sidebar fixe avec filtres -->
+      <aside class="recettes-sidebar">
+        <h3>🔍 Filtres & Recherche</h3>
+        
+        <div class="sidebar-section">
+          <label>Type de recette</label>
+          <div class="type-filter">
             <button class="btn-filter active" data-type="all" id="filter-all">Tous</button>
             <button class="btn-filter" data-type="Plat" id="filter-plats">🍽️ Plats</button>
             <button class="btn-filter" data-type="Dessert" id="filter-desserts">🍰 Desserts</button>
           </div>
-          <input type="text" id="search-plats" placeholder="Rechercher une recette..." class="search-input">
-          <input type="text" id="filter-ingredients" placeholder="Filtrer par ingrédient (ex: poulet)" class="search-input" style="margin-left: 0.5rem;">
-          <select id="sort-plats" class="search-input" style="margin-left: 0.5rem; width: auto;">
+        </div>
+
+        <div class="sidebar-section">
+          <label for="search-plats">Nom de recette</label>
+          <input type="text" id="search-plats" placeholder="Rechercher..." class="search-input">
+        </div>
+
+        <div class="sidebar-section">
+          <label for="filter-ingredients">Ingrédient</label>
+          <input type="text" id="filter-ingredients" placeholder="Ex: poulet" class="search-input">
+        </div>
+
+        <div class="sidebar-section">
+          <label for="sort-plats">Trier par</label>
+          <select id="sort-plats" class="search-input">
             <option value="alpha">A-Z</option>
             <option value="temps">Temps</option>
             <option value="difficulte">Difficulté</option>
           </select>
-          <button class="btn-primary" id="btn-new-plat">➕ Nouvelle Recette</button>
         </div>
+
+        <div class="sidebar-section">
+          <button class="btn-primary btn-fullwidth" id="btn-new-plat">➕ Nouvelle Recette</button>
+        </div>
+      </aside>
+
+      <!-- Contenu principal avec les cards -->
+      <div class="recettes-content">
+        <div class="view-header">
+          <h2>📖 Mes Recettes</h2>
+        </div>
+        <div id="plats-list" class="cards-grid"></div>
       </div>
-      <div id="plats-list" class="cards-grid"></div>
     </div>
 
     <!-- Vue Calendrier -->
