@@ -556,7 +556,20 @@ async function duplicatePlat(event, platId) {
     
     const result = await duplicateResponse.json();
     showNotification(`Recette "${newName}" créée avec succès !`, 'success');
+    
+    // Sauvegarder les filtres actuels
+    const searchQuery = document.getElementById('search-plats').value;
+    const ingredientFilter = document.getElementById('filter-ingredients').value;
+    
+    // Recharger les plats
     await loadPlats();
+    
+    // Réappliquer les filtres
+    document.getElementById('search-plats').value = searchQuery;
+    document.getElementById('filter-ingredients').value = ingredientFilter;
+    
+    // Déclencher le filtrage
+    document.getElementById('search-plats').dispatchEvent(new Event('input'));
     
   } catch (err) {
     console.error('Erreur duplication plat:', err);
