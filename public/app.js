@@ -518,8 +518,19 @@ async function deletePlat(event, platId) {
   if (!confirmed) return;
   
   try {
+    // Sauvegarder les filtres actuels
+    const searchQuery = document.getElementById('search-plats').value;
+    const ingredientFilter = document.getElementById('filter-ingredients').value;
+    
     await fetch(`${API_BASE}/plats/${platId}`, { method: 'DELETE' });
     await loadPlats();
+    
+    // Réappliquer les filtres
+    document.getElementById('search-plats').value = searchQuery;
+    document.getElementById('filter-ingredients').value = ingredientFilter;
+    
+    // Déclencher le filtrage
+    document.getElementById('search-plats').dispatchEvent(new Event('input'));
   } catch (err) {
     console.error('Erreur suppression plat:', err);
   }
