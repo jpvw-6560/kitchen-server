@@ -51,9 +51,15 @@ class Ingredient {
    */
   static async create(ingredientData) {
     const { nom, unite, categorie } = ingredientData;
+    // Forcer le nom en minuscules et normaliser les caractères spéciaux
+    const nomLowercase = nom.toLowerCase()
+      .replace(/œ/g, 'oe')
+      .replace(/æ/g, 'ae')
+      .trim()
+      .replace(/\s+/g, ' ');
     const [result] = await pool.query(
       'INSERT INTO ingredients (nom, unite, categorie) VALUES (?, ?, ?)',
-      [nom, unite, categorie]
+      [nomLowercase, unite, categorie]
     );
     return result.insertId;
   }
@@ -63,9 +69,15 @@ class Ingredient {
    */
   static async update(id, ingredientData) {
     const { nom, unite, categorie } = ingredientData;
+    // Forcer le nom en minuscules et normaliser les caractères spéciaux
+    const nomLowercase = nom.toLowerCase()
+      .replace(/œ/g, 'oe')
+      .replace(/æ/g, 'ae')
+      .trim()
+      .replace(/\s+/g, ' ');
     await pool.query(
       'UPDATE ingredients SET nom = ?, unite = ?, categorie = ? WHERE id = ?',
-      [nom, unite, categorie, id]
+      [nomLowercase, unite, categorie, id]
     );
     return true;
   }

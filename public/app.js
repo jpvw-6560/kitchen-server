@@ -1542,7 +1542,7 @@ async function editPlat(event, platId) {
           <select class="ingredient-select">
             <option value="">Sélectionner...</option>
             <option value="__new__" style="color: var(--primary); font-weight: 600;">➕ Créer un nouvel ingrédient...</option>
-            ${state.ingredients.map(i => 
+            ${[...state.ingredients].sort((a, b) => a.nom.localeCompare(b.nom)).map(i => 
               `<option value="${i.id}" ${i.id === ing.id ? 'selected' : ''}>${i.nom}</option>`
             ).join('')}
           </select>
@@ -1777,6 +1777,11 @@ let menuSearchInitialized = false;
  * Ouvre la modale pour planifier un menu
  */
 async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, notes = "") {
+  if (!state.editMode) {
+    showNotification('Veuillez activer le mode édition pour gérer les plats du calendrier.', 'warning');
+    return;
+  }
+  
   const modal = document.getElementById("modal-menu");
   const title = document.getElementById("modal-menu-title");
   const dateLabel = document.getElementById("menu-date-label");
@@ -1928,6 +1933,11 @@ function selectPlatForMenu(id, nom, temps, difficulte) {
  * Enregistre le menu
  */
 async function saveMenu() {
+  if (!state.editMode) {
+    showNotification('Veuillez activer le mode édition pour enregistrer un menu.', 'warning');
+    return;
+  }
+  
   if (!selectedPlatForMenu) {
     showNotification("Veuillez sélectionner une recette", "warning");
     return;
@@ -1966,6 +1976,11 @@ async function saveMenu() {
  * Supprime un menu
  */
 async function deleteMenu(dateStr) {
+  if (!state.editMode) {
+    showNotification('Veuillez activer le mode édition pour supprimer un menu.', 'warning');
+    return;
+  }
+  
   console.log("Tentative de suppression pour la date:", dateStr);
   
   const confirmed = await showConfirmDialog(
@@ -1998,6 +2013,11 @@ async function deleteMenu(dateStr) {
  * Supprime tous les menus de la semaine affichée
  */
 async function clearWeek() {
+  if (!state.editMode) {
+    showNotification('Veuillez activer le mode édition pour vider la semaine.', 'warning');
+    return;
+  }
+  
   const confirmed = await showConfirmDialog(
     "Voulez-vous vraiment vider tous les menus de cette semaine ?",
     "Vider la semaine",
