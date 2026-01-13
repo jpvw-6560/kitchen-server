@@ -15,6 +15,9 @@ router.put('/:id', platController.updatePlat);
 router.patch('/:id/favori', platController.toggleFavori);
 router.delete('/:id', platController.deletePlat);
 
+// Route de duplication
+router.post('/:id/duplicate', platController.duplicatePlat);
+
 // Routes pour les ingrédients d'un plat
 router.post('/:id/ingredients', platController.addIngredient);
 router.delete('/:id/ingredients/:ingredientId', platController.removeIngredient);

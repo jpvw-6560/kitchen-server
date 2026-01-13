@@ -208,6 +208,66 @@ class Plat {
     await pool.query('DELETE FROM preparations WHERE plat_id = ?', [platId]);
     return true;
   }
+  
+  /**
+   * Duplique un plat avec tous ses ingrédients et préparations
+   */
+  static async duplicate(platId, newName) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      
+      // Récupérer le plat original
+      const [originalPlat] = await connection.query('SELECT * FROM plats WHERE id = ?', [platId]);
+      if (originalPlat.length === 0) {
+        throw new Error('Plat non trouvé');
+      }
+      
+      const plat = originalPlat[0];
+      
+      // Créer le nouveau plat (copie)
+      const [result] = await connection.query(`
+        INSERT INTO plats (nom, description, type, temps_preparation, difficulte, conseils_chef, nombre_personnes, favori)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        newName,
+        plat.description,
+        plat.type,
+        plat.temps_preparation,
+        plat.difficulte,
+        plat.conseils_chef,
+        plat.nombre_personnes,
+        false // Ne pas copier le statut favori
+      ]);
+      
+      const newPlatId = result.insertId;
+      
+      // Copier les ingrédients
+      await connection.query(`
+        INSERT INTO plat_ingredients (plat_id, ingredient_id, quantite, unite)
+        SELECT ?, ingredient_id, quantite, unite
+        FROM plat_ingredients
+        WHERE plat_id = ?
+      `, [newPlatId, platId]);
+      
+      // Copier les préparations
+      await connection.query(`
+        INSERT INTO preparations (plat_id, ordre, description, duree_minutes)
+        SELECT ?, ordre, description, duree_minutes
+        FROM preparations
+        WHERE plat_id = ?
+      `, [newPlatId, platId]);
+      
+      await connection.commit();
+      return newPlatId;
+      
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = Plat;

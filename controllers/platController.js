@@ -194,6 +194,27 @@ async function clearPreparations(req, res) {
   }
 }
 
+/**
+ * Duplique un plat
+ */
+async function duplicatePlat(req, res) {
+  try {
+    const { nom } = req.body;
+    if (!nom) {
+      return res.status(400).json({ error: 'Le nouveau nom est requis' });
+    }
+    
+    const newPlatId = await Plat.duplicate(req.params.id, nom);
+    res.status(201).json({ 
+      id: newPlatId, 
+      message: 'Plat dupliqué avec succès' 
+    });
+  } catch (err) {
+    console.error('Erreur duplicatePlat:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
 module.exports = {
   getAllPlats,
   getPlatById,
@@ -208,5 +229,6 @@ module.exports = {
   clearIngredients,
   addPreparation,
   removePreparation,
-  clearPreparations
+  clearPreparations,
+  duplicatePlat
 };

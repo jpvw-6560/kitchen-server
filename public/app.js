@@ -344,6 +344,8 @@ function renderPlats(platsToRender = state.plats) {
         <button class="btn-icon btn-favori ${plat.favori ? 'active' : ''}" 
                 onclick="toggleFavori(event, ${plat.id})" 
                 title="Favori">⭐</button>
+        <button class="btn-icon" onclick="duplicatePlat(event, ${plat.id})" title="Dupliquer" 
+                ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>📋</button>
         <button class="btn-icon" onclick="editPlat(event, ${plat.id})" title="Modifier" 
                 ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
         <button class="btn-icon" onclick="deletePlat(event, ${plat.id})" title="Supprimer" 
@@ -522,6 +524,46 @@ async function deletePlat(event, platId) {
     console.error('Erreur suppression plat:', err);
   }
 }
+
+async function duplicatePlat(event, platId) {
+  event.stopPropagation();
+  
+  if (!state.editMode) {
+    showNotification('Veuillez activer le mode édition pour dupliquer une recette.', 'warning');
+    return;
+  }
+  
+  try {
+    // Récupérer le plat original
+    const response = await fetch(`${API_BASE}/plats/${platId}`);
+    const plat = await response.json();
+    
+    // Demander le nouveau nom
+    const newName = prompt(`Dupliquer "${plat.nom}"\n\nEntrez le nouveau nom :`, `${plat.nom} - Copie`);
+    
+    if (!newName || newName.trim() === '') {
+      return;
+    }
+    
+    // Dupliquer
+    const duplicateResponse = await fetch(`${API_BASE}/plats/${platId}/duplicate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nom: newName.trim() })
+    });
+    
+    if (!duplicateResponse.ok) throw new Error('Erreur lors de la duplication');
+    
+    const result = await duplicateResponse.json();
+    showNotification(`Recette "${newName}" créée avec succès !`, 'success');
+    await loadPlats();
+    
+  } catch (err) {
+    console.error('Erreur duplication plat:', err);
+    showNotification('Erreur lors de la duplication de la recette', 'error');
+  }
+}
+
 
 async function editIngredient(ingredientId) {
   if (!state.editMode) {
