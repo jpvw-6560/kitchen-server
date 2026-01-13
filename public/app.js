@@ -25,6 +25,7 @@ const state = {
   currentView: 'plats',
   plats: [],
   ingredients: [],
+  categories: [], // Cache des catégories
   config: {},
   currentWeekStart: null,
   editingPlat: null,
@@ -148,16 +149,29 @@ async function loadConfig() {
     const response = await fetch(`${API_BASE}/config`);
     state.config = await response.json();
     
-    // Remplir les select d'unités et catégories
+    // Remplir les select d'unités
     const uniteSelects = document.querySelectorAll('#ingredient-unite');
     uniteSelects.forEach(select => {
       select.innerHTML = state.config.unites.map(u => `<option value="${u}">${u}</option>`).join('');
     });
     
-    const categorieSelect = document.getElementById('ingredient-categorie');
-    categorieSelect.innerHTML = state.config.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    // Charger les catégories depuis la table categories
+    await loadCategoriesDropdown();
   } catch (err) {
     console.error('Erreur chargement config:', err);
+  }
+}
+
+async function loadCategoriesDropdown() {
+  try {
+    const response = await fetch(`${API_BASE}/ingredients/categories`);
+    state.categories = await response.json();
+    
+    const categorieSelect = document.getElementById('ingredient-categorie');
+    categorieSelect.innerHTML = '<option value="">-- Choisir une catégorie --</option>' + 
+      state.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  } catch (err) {
+    console.error('Erreur chargement catégories:', err);
   }
 }
 
@@ -380,61 +394,85 @@ function renderFavoris(favoris) {
 }
 
 // Rendu des ingrédients avec accordéon par catégorie
-function renderIngredients(ingredientsToRender = state.ingredients) {
+async function renderIngredients(ingredientsToRender = state.ingredients) {
   const container = document.getElementById('ingredients-list');
   
-  if (ingredientsToRender.length === 0) {
-    container.innerHTML = '<p class="menu-empty">Aucun ingrédient trouvé</p>';
-    return;
+  // Charger les catégories si pas encore en cache
+  if (state.categories.length === 0) {
+    try {
+      const response = await fetch(`${API_BASE}/ingredients/categories`);
+      state.categories = await response.json();
+    } catch (err) {
+      console.error('Erreur chargement catégories:', err);
+    }
   }
   
-  // Grouper par catégorie et trier alphabétiquement
+  // Utiliser les catégories du cache
+  const allCategories = state.categories;
+  
+  // Grouper les ingrédients par catégorie
   const grouped = {};
+  
+  // Initialiser toutes les catégories (même vides)
+  allCategories.forEach(cat => {
+    grouped[cat] = [];
+  });
+  
+  // Ajouter les ingrédients à leurs catégories
   ingredientsToRender.forEach(ing => {
     const cat = ing.categorie || 'Autres';
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(ing);
   });
   
-  // Trier les catégories alphabétiquement
-  const sortedCategories = Object.keys(grouped).sort();
+  // Trier les catégories alphabétiquement et filtrer les vides si on fait une recherche
+  const sortedCategories = Object.keys(grouped)
+    .filter(cat => ingredientsToRender.length === state.ingredients.length || grouped[cat].length > 0)
+    .sort();
   
   container.innerHTML = sortedCategories.map(categorie => {
     const ingredients = grouped[categorie];
     const count = ingredients.length;
     const categoryId = categorie.replace(/\s+/g, '-').toLowerCase();
     
+    // Auto-ouvrir les catégories lors d'une recherche
+    const isSearching = ingredientsToRender.length < state.ingredients.length;
+    const shouldOpen = isSearching && count > 0;
+    
     return `
       <div class="categorie-accordion">
         <button class="categorie-header" onclick="toggleCategorie('${categoryId}')">
-          <span class="categorie-icon">▶</span>
+          <span class="categorie-icon">${shouldOpen ? '▼' : '▶'}</span>
           <span class="categorie-name">${categorie}</span>
           <span class="categorie-count">(${count})</span>
         </button>
-        <div class="categorie-content" id="cat-${categoryId}">
-          <table class="ingredients-table">
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Unité</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${ingredients.map(ing => `
+        <div class="categorie-content ${shouldOpen ? 'open' : ''}" id="cat-${categoryId}">
+          ${count === 0 ? 
+            '<p style="text-align: center; color: var(--text-secondary); padding: 1rem; font-style: italic;">Aucun ingrédient dans cette catégorie</p>' :
+            `<table class="ingredients-table">
+              <thead>
                 <tr>
-                  <td>${ing.nom}</td>
-                  <td>${ing.unite || '-'}</td>
-                  <td>
-                    <button class="btn-icon" onclick="editIngredient(${ing.id})" title="Modifier" 
-                            ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
-                    <button class="btn-icon" onclick="deleteIngredient(${ing.id})" title="Supprimer" 
-                            ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>🗑️</button>
-                  </td>
+                  <th>Nom</th>
+                  <th>Unité</th>
+                  <th>Actions</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${ingredients.map(ing => `
+                  <tr>
+                    <td>${ing.nom}</td>
+                    <td>${ing.unite || '-'}</td>
+                    <td>
+                      <button class="btn-icon" onclick="editIngredient(${ing.id})" title="Modifier" 
+                              ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
+                      <button class="btn-icon" onclick="deleteIngredient(${ing.id})" title="Supprimer" 
+                              ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>🗑️</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>`
+          }
         </div>
       </div>
     `;
@@ -529,6 +567,7 @@ function setupCategoriesHandlers() {
         
         input.value = '';
         await loadCategoriesList();
+        await loadCategoriesDropdown(); // Recharger le dropdown aussi
         await loadIngredients();
         showNotification('Catégorie créée avec succès', 'success');
       } catch (err) {
@@ -558,6 +597,7 @@ async function renameCategory(oldName, count) {
     }
     
     await loadCategoriesList();
+    await loadCategoriesDropdown(); // Recharger le dropdown aussi
     await loadIngredients();
     showNotification('Catégorie renommée avec succès', 'success');
   } catch (err) {
@@ -650,13 +690,15 @@ function setupSearchHandlers() {
   sortPlats.addEventListener('change', applyFiltersAndSort);
   
   const searchIngredients = document.getElementById('search-ingredients');
-  searchIngredients.addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase();
-    const filtered = state.ingredients.filter(i => 
-      i.nom.toLowerCase().includes(query)
-    );
-    renderIngredients(filtered);
-  });
+  if (searchIngredients) {
+    searchIngredients.addEventListener('input', async (e) => {
+      const query = e.target.value.toLowerCase();
+      const filtered = state.ingredients.filter(i => 
+        i.nom.toLowerCase().includes(query)
+      );
+      await renderIngredients(filtered);
+    });
+  }
 }
 
 // Actions sur les plats
