@@ -258,6 +258,14 @@ class Plat {
         WHERE plat_id = ?
       `, [newPlatId, platId]);
       
+      // Copier les médias
+      await connection.query(`
+        INSERT INTO medias (plat_id, type, chemin_fichier, principale)
+        SELECT ?, type, chemin_fichier, principale
+        FROM medias
+        WHERE plat_id = ?
+      `, [newPlatId, platId]);
+      
       await connection.commit();
       return newPlatId;
       
