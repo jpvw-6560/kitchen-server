@@ -9,14 +9,16 @@ const platController = require('../controllers/platController');
 router.get('/', platController.getAllPlats);
 router.get('/search', platController.searchPlats);
 router.get('/favoris', platController.getFavoris);
-router.get('/:id', platController.getPlatById);
 router.post('/', platController.createPlat);
+
+// Route de duplication (AVANT /:id pour éviter les conflits)
+router.post('/:id/duplicate', platController.duplicatePlat);
+
+// Routes avec :id (doivent être APRÈS les routes spécifiques)
+router.get('/:id', platController.getPlatById);
 router.put('/:id', platController.updatePlat);
 router.patch('/:id/favori', platController.toggleFavori);
 router.delete('/:id', platController.deletePlat);
-
-// Route de duplication
-router.post('/:id/duplicate', platController.duplicatePlat);
 
 // Routes pour les ingrédients d'un plat
 router.post('/:id/ingredients', platController.addIngredient);
