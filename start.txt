@@ -1,0 +1,124 @@
+========================================
+SERVEUR RECETTES - RECIPE_SERVER
+========================================
+
+Répertoire:
+cd Documents/node_appli/recipe_server
+
+Démarrage:
+npm start &
+
+Accès LOCAL:
+http://localhost:3002/               → Application principale
+http://localhost:3002/plats          → Gestion des plats
+http://localhost:3002/ingredients    → Gestion des ingrédients
+http://localhost:3002/menus          → Gestion des menus
+http://localhost:3002/medias         → Gestion des médias
+
+Vérifier:
+ss -tlnp | grep :3002
+
+Vérifier quel processus utilise le port 3002:
+lsof -i :3002
+
+Arrêt:
+pkill -f 'node.*recipe_server'
+
+Arrêt forcé d'un processus spécifique (remplacer PID):
+kill -9 PID
+
+
+========================================
+TAILSCALE VPN (ACCÈS DISTANT SÉCURISÉ)
+========================================
+
+✅ Solution retenue pour l'accès distant sécurisé RECIPE_SERVER
+
+Avantages:
+- Configuration instantanée (2 minutes)
+- Connexion VPN chiffrée (WireGuard)
+- Pas de proxy applicatif nécessaire
+- IP fixe sur le réseau Tailscale
+
+Installation:
+curl -fsSL https://tailscale.com/install.sh | sh
+
+Démarrage:
+sudo tailscale up
+
+Obtenir l'IP Tailscale:
+tailscale ip -4
+
+État:
+tailscale status
+
+Accès au serveur depuis Internet:
+1. Installer Tailscale sur l'appareil client
+2. Se connecter au réseau Tailscale
+3. Accéder à http://[TAILSCALE-IP]:3002/
+
+⚠️ IMPORTANT:
+- Accès réseau complet sans authentification applicative
+- Sécurité assurée au niveau réseau (VPN)
+- Tous les appareils du réseau Tailscale peuvent accéder au serveur
+
+
+========================================
+BASE DE DONNÉES
+========================================
+
+SQLite:
+Base de données: database.sqlite
+
+Localisation:
+/home/jpvw/Documents/node_appli/recipe_server/database.sqlite
+
+Scripts utiles:
+node scripts/create-categories-table.js    → Créer table catégories
+node scripts/fix-ingredients.js            → Corriger ingrédients
+node scripts/import-recettes.js            → Importer recettes
+node scripts/list-ingredients.js           → Lister ingrédients
+
+Backup manuel:
+cp database.sqlite database.sqlite.backup.$(date +%Y%m%d_%H%M%S)
+
+Vérifier l'intégrité:
+sqlite3 database.sqlite "PRAGMA integrity_check;"
+
+
+========================================
+MÉDIAS ET UPLOADS
+========================================
+
+Répertoire uploads:
+/home/jpvw/Documents/node_appli/recipe_server/uploads/
+
+Formats supportés:
+- Images: JPG, JPEG, PNG, GIF, WEBP
+- Vidéos: MP4, WEBM
+
+Taille maximale: 100 MB
+
+Configuration:
+config/config.js
+
+Nettoyage des médias orphelins:
+# À définir selon les besoins
+
+
+========================================
+AUTRES COMMANDES
+========================================
+
+NPM:
+npm install                               → Installer dépendances
+npm update                                → Mettre à jour packages
+npm audit fix                             → Corriger vulnérabilités
+
+Git:
+git add . && git commit -m "Message" && git push
+
+Logs serveur:
+# Les logs s'affichent dans le terminal où npm start est lancé
+# Pour les logs en arrière-plan, rediriger vers un fichier:
+npm start > logs/server.log 2>&1 &

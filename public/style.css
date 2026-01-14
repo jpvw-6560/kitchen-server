@@ -39,18 +39,17 @@ body {
 }
 
 .nav-container {
-  max-width: 1400px;
-  margin: 0 auto;
   padding: 1rem 2rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2rem;
 }
 
 .logo {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--primary);
+  margin-right: auto;
 }
 
 .nav-menu {
