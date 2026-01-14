@@ -343,7 +343,12 @@ function renderPlats(platsToRender = state.plats) {
       <div class="card-header">
         <h3 class="card-title">${plat.nom}</h3>
         <div class="card-header-right">
-          <span class="card-badge badge-type">${plat.type === 'Dessert' ? '🍰 Dessert' : '🍽️ Plat'}</span>
+          <span class="card-badge badge-type">${
+            plat.type === 'Dessert' ? '🍰 Dessert' : 
+            plat.type === 'Sauce' ? '🍶 Sauce' :
+            plat.type === 'Confiture' ? '🍯 Confiture' :
+            '🍽️ Plat'
+          }</span>
           <span class="card-badge badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
         </div>
       </div>

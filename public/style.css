@@ -189,10 +189,18 @@ input:disabled + .slider {
   align-items: center;
 }
 
-/* Filtres de type (Plats/Desserts) */
+/* Filtres de type (Plats/Desserts/Sauces/Confitures) */
 .type-filter {
   display: flex;
   gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.type-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .btn-filter {

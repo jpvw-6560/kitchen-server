@@ -29,7 +29,7 @@ async function initDatabase() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         nom VARCHAR(200) NOT NULL,
         description TEXT,
-        type ENUM('Plat', 'Dessert') DEFAULT 'Plat',
+        type ENUM('Plat', 'Dessert', 'Sauce', 'Confiture') DEFAULT 'Plat',
         temps_preparation INT,
         difficulte ENUM('Facile', 'Moyen', 'Difficile') DEFAULT 'Moyen',
         conseils_chef TEXT,
@@ -46,10 +46,19 @@ async function initDatabase() {
     // Ajouter la colonne type si elle n'existe pas déjà (migration)
     try {
       await connection.query(`
-        ALTER TABLE plats ADD COLUMN type ENUM('Plat', 'Dessert') DEFAULT 'Plat' AFTER description
+        ALTER TABLE plats ADD COLUMN type ENUM('Plat', 'Dessert', 'Sauce', 'Confiture') DEFAULT 'Plat' AFTER description
       `);
     } catch (err) {
       // Ignorer si la colonne existe déjà
+    }
+    
+    // Modifier la colonne type pour ajouter les nouveaux types si elle existe déjà
+    try {
+      await connection.query(`
+        ALTER TABLE plats MODIFY COLUMN type ENUM('Plat', 'Dessert', 'Sauce', 'Confiture') DEFAULT 'Plat'
+      `);
+    } catch (err) {
+      // Ignorer les erreurs
     }
     
     // Table des ingrédients
