@@ -140,8 +140,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupCalendrier();
   setupEditModeToggle();
   setupCategoriesHandlers();
+  setupFilterToggle();
   updateEditModeUI();  // Initialiser l'état des boutons
 });
+
+// Toggle des filtres sur mobile
+function setupFilterToggle() {
+  const toggleBtn = document.getElementById('toggle-filters-btn');
+  const filtersContent = document.getElementById('filters-content');
+  
+  if (toggleBtn && filtersContent) {
+    toggleBtn.addEventListener('click', () => {
+      toggleBtn.classList.toggle('collapsed');
+      filtersContent.classList.toggle('expanded');
+    });
+  }
+  
+  // Toggle pour la sidebar des ingrédients
+  const toggleIngredientsBtn = document.getElementById('toggle-ingredients-filters-btn');
+  const ingredientsFiltersContent = document.getElementById('ingredients-filters-content');
+  
+  if (toggleIngredientsBtn && ingredientsFiltersContent) {
+    toggleIngredientsBtn.addEventListener('click', () => {
+      toggleIngredientsBtn.classList.toggle('collapsed');
+      ingredientsFiltersContent.classList.toggle('expanded');
+    });
+  }
+}
 
 // Chargement des données
 async function loadConfig() {
@@ -207,15 +232,89 @@ async function loadFavoris() {
 
 // Navigation
 function setupNavigation() {
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+  console.log('Setup navigation - attaching event listeners');
+  
+  // Navigation des boutons
+  const navButtons = document.querySelectorAll('.nav-btn');
+  console.log('Found', navButtons.length, 'navigation buttons');
+  
+  navButtons.forEach((btn, index) => {
+    console.log('Button', index, ':', btn.dataset.view);
+    btn.addEventListener('click', (e) => {
+      console.log('Button clicked:', btn.dataset.view);
       const view = btn.dataset.view;
       switchView(view);
+      // Fermer le menu mobile après sélection
+      closeMobileMenu();
     });
+  });
+  
+  // Menu hamburger
+  const hamburger = document.getElementById('hamburger-btn');
+  const navMenu = document.getElementById('nav-menu');
+  const overlay = document.getElementById('mobile-menu-overlay');
+  
+  console.log('Hamburger:', hamburger ? 'found' : 'NOT FOUND');
+  console.log('Nav menu:', navMenu ? 'found' : 'NOT FOUND');
+  console.log('Overlay:', overlay ? 'found' : 'NOT FOUND');
+  
+  if (hamburger) {
+    hamburger.addEventListener('click', (e) => {
+      console.log('Hamburger clicked!');
+      e.stopPropagation(); // Empêcher la propagation du clic
+      e.preventDefault();
+      toggleMobileMenu();
+    });
+  }
+  
+  // Fermer le menu si on clique en dehors
+  document.addEventListener('click', (e) => {
+    const navMenu = document.getElementById('nav-menu');
+    const hamburger = document.getElementById('hamburger-btn');
+    
+    if (navMenu && navMenu.classList.contains('active')) {
+      // Vérifier si le clic est en dehors du menu et du hamburger
+      if (!navMenu.contains(e.target) && !hamburger.contains(e.target)) {
+        console.log('Click outside menu - closing');
+        closeMobileMenu();
+      }
+    }
   });
 }
 
+function toggleMobileMenu() {
+  console.log('toggleMobileMenu called');
+  const hamburger = document.getElementById('hamburger-btn');
+  const navMenu = document.getElementById('nav-menu');
+  const overlay = document.getElementById('mobile-menu-overlay');
+  
+  hamburger.classList.toggle('open');
+  navMenu.classList.toggle('active');
+  overlay.classList.toggle('active');
+  
+  console.log('Menu active:', navMenu.classList.contains('active'));
+  
+  // Empêcher le scroll du body quand le menu est ouvert
+  document.body.style.overflow = navMenu.classList.contains('active') ? 'hidden' : '';
+}
+
+function closeMobileMenu() {
+  const hamburger = document.getElementById('hamburger-btn');
+  const navMenu = document.getElementById('nav-menu');
+  const overlay = document.getElementById('mobile-menu-overlay');
+  
+  if (hamburger && navMenu && overlay) {
+    hamburger.classList.remove('open');
+    navMenu.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    console.log('Menu closed');
+  }
+}
+
 function switchView(viewName) {
+  console.log('switchView called with:', viewName);
+  
   // Mettre à jour les boutons de navigation
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === viewName);
@@ -225,7 +324,14 @@ function switchView(viewName) {
   document.querySelectorAll('.view').forEach(view => {
     view.classList.remove('active');
   });
-  document.getElementById(`view-${viewName}`).classList.add('active');
+  
+  const targetView = document.getElementById(`view-${viewName}`);
+  console.log('Target view:', targetView ? 'found' : 'NOT FOUND');
+  
+  if (targetView) {
+    targetView.classList.add('active');
+    console.log('View switched to:', viewName);
+  }
   
   state.currentView = viewName;
   
@@ -268,6 +374,12 @@ function updateEditModeUI() {
       btn.style.cursor = editMode ? 'pointer' : 'not-allowed';
     }
   });
+  
+  // Bouton Vider la semaine (calendrier) - masquer/afficher
+  const clearWeekBtn = document.getElementById('btn-clear-week');
+  if (clearWeekBtn) {
+    clearWeekBtn.style.display = editMode ? 'block' : 'none';
+  }
   
   // Re-render les listes pour appliquer les changements aux boutons d'action
   if (state.currentView === 'plats') {
@@ -365,7 +477,7 @@ function renderPlats(platsToRender = state.plats) {
                 onclick="toggleFavori(event, ${plat.id})" 
                 title="Favori">⭐</button>
         <button class="btn-icon" onclick="duplicatePlat(event, ${plat.id})" title="Dupliquer" 
-                ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>�</button>
+                ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>📋</button>
         <button class="btn-icon" onclick="editPlat(event, ${plat.id})" title="Modifier" 
                 ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
         <button class="btn-icon" onclick="deletePlat(event, ${plat.id})" title="Supprimer" 
@@ -379,20 +491,21 @@ function renderFavoris(favoris) {
   const container = document.getElementById('favoris-list');
   
   if (favoris.length === 0) {
-    container.innerHTML = '<p class="menu-empty">Aucune recette favorite</p>';
+    container.innerHTML = '<p class="menu-empty">Aucune recette</p>';
     return;
   }
   
   container.innerHTML = favoris.map(plat => `
     <div class="card" onclick="viewPlatDetails(${plat.id})">
       <div class="card-header">
-        <h3 class="card-title">${plat.nom}</h3>
+        <h3 class="card-title">${plat.favori ? '⭐ ' : ''}${plat.nom}</h3>
         <span class="card-badge badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
       </div>
       ${plat.description ? `<p class="card-description">${plat.description}</p>` : ''}
       <div class="card-meta">
         ${plat.temps_preparation ? `<span>⏱ ${plat.temps_preparation} min</span>` : ''}
         <span>👥 ${plat.nombre_personnes} pers.</span>
+        <span>📊 ${plat.nb_occurrences || 0}×</span>
       </div>
     </div>
   `).join('');
@@ -1400,6 +1513,11 @@ function renderCalendrier(menus) {
       return menuDate === dateStr;
     });
     
+    // Debug : afficher les occurrences
+    if (menu && menu.plat_nom) {
+      console.log(`${jour} - ${menu.plat_nom}: occurrences =`, menu.occurrences_6_mois);
+    }
+    
     return `
       <div class="jour-card" data-date="${dateStr}" data-jour="${jour}">
         <div class="jour-header">
@@ -1411,7 +1529,10 @@ function renderCalendrier(menus) {
             </button>
           </div>
         </div>
-        <div class="jour-date">${date.getDate()}/${date.getMonth() + 1}</div>
+        <div class="jour-date" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>${date.getDate()}/${date.getMonth() + 1}</span>
+          ${menu ? `<span style="font-size: 0.7rem; color: var(--warning); font-style: italic;" title="Nombre de fois proposé dans les 6 derniers mois">📊 ${menu.occurrences_6_mois || 0}×</span>` : ''}
+        </div>
         ${menu && menu.plat_nom ? `
           <div class="jour-menu" onclick="openMenuModal('${dateStr}', '${jour}', ${menu.plat_id}, ${menu.nombre_personnes}, '${menu.notes || ''}')">
             <strong>${menu.plat_nom}</strong>

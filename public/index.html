@@ -10,8 +10,13 @@
   <!-- Navigation -->
   <nav class="navbar">
     <div class="nav-container">
+      <button class="hamburger" id="hamburger-btn" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
       <h1 class="logo">👨‍🍳 Recipe Server</h1>
-      <div class="nav-menu">
+      <div class="nav-menu" id="nav-menu">
         <button class="nav-btn active" data-view="plats">📖 Recettes</button>
         <button class="nav-btn" data-view="calendrier">📅 Calendrier</button>
         <button class="nav-btn" data-view="ingredients">🥕 Ingrédients</button>
@@ -26,6 +31,9 @@
       </div>
     </div>
   </nav>
+  
+  <!-- Overlay pour fermer le menu mobile -->
+  <div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
 
   <!-- Conteneur principal -->
   <div class="container">
@@ -34,7 +42,13 @@
     <div class="view active" id="view-plats">
       <!-- Sidebar fixe avec filtres -->
       <aside class="recettes-sidebar">
-        <h3>🔍 Filtres & Recherche</h3>
+        <div class="sidebar-header">
+          <h3>🔍 Filtres & Recherche</h3>
+          <button class="sidebar-toggle-btn" id="toggle-filters-btn">
+            <span class="toggle-icon">▼</span>
+          </button>
+        </div>
+        <div class="sidebar-content" id="filters-content">
         
         <div class="sidebar-section">
           <label>Type de recette</label>
@@ -73,6 +87,7 @@
         <div class="sidebar-section">
           <button class="btn-primary btn-fullwidth" id="btn-new-plat">➕ Nouvelle Recette</button>
         </div>
+        </div>
       </aside>
 
       <!-- Contenu principal avec les cards -->
@@ -89,9 +104,9 @@
       <div class="view-header">
         <h2>📅 Calendrier des Menus</h2>
         <div class="header-actions">
-          <button class="btn-secondary" id="btn-prev-week">◀ Semaine précédente</button>
+          <button class="btn-secondary" id="btn-prev-week"><span class="btn-text-full">◀ Semaine précédente</span><span class="btn-text-short">◀</span></button>
           <span id="current-week" class="week-label"></span>
-          <button class="btn-secondary" id="btn-next-week">Semaine suivante ▶</button>
+          <button class="btn-secondary" id="btn-next-week"><span class="btn-text-full">Semaine suivante ▶</span><span class="btn-text-short">▶</span></button>
           <button class="btn-danger" id="btn-clear-week" style="margin-left: 1rem;">🗑️ Vider la semaine</button>
         </div>
       </div>
@@ -113,7 +128,13 @@
     <div class="view" id="view-ingredients">
       <!-- Sidebar fixe avec recherche -->
       <aside class="ingredients-sidebar">
-        <h3>🔍 Recherche</h3>
+        <div class="sidebar-header">
+          <h3>🔍 Recherche</h3>
+          <button class="sidebar-toggle-btn" id="toggle-ingredients-filters-btn">
+            <span class="toggle-icon">▼</span>
+          </button>
+        </div>
+        <div class="sidebar-content" id="ingredients-filters-content">
         
         <div class="sidebar-section">
           <label for="search-ingredients">Nom d'ingrédient</label>
@@ -131,6 +152,7 @@
         <div class="sidebar-section">
           <button class="btn-secondary btn-fullwidth" id="btn-manage-categories">⚙️ Gérer les catégories</button>
         </div>
+        </div>
       </aside>
 
       <!-- Contenu principal avec la table -->
@@ -145,7 +167,7 @@
     <!-- Vue Favoris -->
     <div class="view" id="view-favoris">
       <div class="view-header">
-        <h2>⭐ Mes Recettes Favorites</h2>
+        <h2>📖 Toutes mes recettes</h2>
       </div>
       <div id="favoris-list" class="cards-grid"></div>
     </div>

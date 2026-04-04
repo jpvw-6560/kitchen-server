@@ -10,7 +10,14 @@ class MenuCalendrier {
   static async getByPeriod(dateDebut, dateFin) {
     const [rows] = await pool.query(`
       SELECT mc.*, p.nom as plat_nom, p.description as plat_description,
-             p.temps_preparation, p.difficulte
+             p.temps_preparation, p.difficulte,
+             (
+               SELECT COUNT(*)
+               FROM menu_calendrier mc2
+               WHERE mc2.plat_id = mc.plat_id
+               AND mc2.date BETWEEN DATE_SUB(mc.date, INTERVAL 6 MONTH) AND mc.date
+               AND mc2.date < mc.date
+             ) as occurrences_6_mois
       FROM menu_calendrier mc
       LEFT JOIN plats p ON mc.plat_id = p.id
       WHERE mc.date BETWEEN ? AND ?
@@ -25,7 +32,14 @@ class MenuCalendrier {
   static async getByDate(date) {
     const [rows] = await pool.query(`
       SELECT mc.*, p.nom as plat_nom, p.description as plat_description,
-             p.temps_preparation, p.difficulte, p.nombre_personnes as plat_personnes
+             p.temps_preparation, p.difficulte, p.nombre_personnes as plat_personnes,
+             (
+               SELECT COUNT(*)
+               FROM menu_calendrier mc2
+               WHERE mc2.plat_id = mc.plat_id
+               AND mc2.date BETWEEN DATE_SUB(mc.date, INTERVAL 6 MONTH) AND mc.date
+               AND mc2.date < mc.date
+             ) as occurrences_6_mois
       FROM menu_calendrier mc
       LEFT JOIN plats p ON mc.plat_id = p.id
       WHERE mc.date = ?
@@ -39,7 +53,14 @@ class MenuCalendrier {
   static async getSemaineCourante() {
     const [rows] = await pool.query(`
       SELECT mc.*, p.nom as plat_nom, p.description as plat_description,
-             p.temps_preparation, p.difficulte
+             p.temps_preparation, p.difficulte,
+             (
+               SELECT COUNT(*)
+               FROM menu_calendrier mc2
+               WHERE mc2.plat_id = mc.plat_id
+               AND mc2.date BETWEEN DATE_SUB(mc.date, INTERVAL 6 MONTH) AND mc.date
+               AND mc2.date < mc.date
+             ) as occurrences_6_mois
       FROM menu_calendrier mc
       LEFT JOIN plats p ON mc.plat_id = p.id
       WHERE YEARWEEK(mc.date) = YEARWEEK(CURDATE())
@@ -54,7 +75,14 @@ class MenuCalendrier {
   static async getMoisCourant() {
     const [rows] = await pool.query(`
       SELECT mc.*, p.nom as plat_nom, p.description as plat_description,
-             p.temps_preparation, p.difficulte
+             p.temps_preparation, p.difficulte,
+             (
+               SELECT COUNT(*)
+               FROM menu_calendrier mc2
+               WHERE mc2.plat_id = mc.plat_id
+               AND mc2.date BETWEEN DATE_SUB(mc.date, INTERVAL 6 MONTH) AND mc.date
+               AND mc2.date < mc.date
+             ) as occurrences_6_mois
       FROM menu_calendrier mc
       LEFT JOIN plats p ON mc.plat_id = p.id
       WHERE YEAR(mc.date) = YEAR(CURDATE()) AND MONTH(mc.date) = MONTH(CURDATE())

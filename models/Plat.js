@@ -105,12 +105,17 @@ class Plat {
    */
   static async getFavoris() {
     const [rows] = await pool.query(`
-      SELECT p.*, COUNT(DISTINCT pi.id) as nb_ingredients
+      SELECT p.*, 
+             COUNT(DISTINCT pi.id) as nb_ingredients,
+             (
+               SELECT COUNT(*) 
+               FROM menu_calendrier mc 
+               WHERE mc.plat_id = p.id
+             ) as nb_occurrences
       FROM plats p
       LEFT JOIN plat_ingredients pi ON p.id = pi.plat_id
-      WHERE p.favori = TRUE
       GROUP BY p.id
-      ORDER BY p.nom
+      ORDER BY nb_occurrences DESC, p.nom ASC
     `);
     return rows;
   }

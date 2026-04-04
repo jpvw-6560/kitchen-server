@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  recipe_server:
+    build: .
+    container_name: recipe_server
+    restart: unless-stopped
+    ports:
+      - "3011:3002"
+    environment:
+      - PORT=3002
+      - DB_HOST=192.168.129.50
+      - DB_USER=root
+      - DB_PASSWORD=Jpvw1953!
+      - DB_NAME=recipe_db
+      - DB_PORT=3306
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./uploads:/app/uploads
+      - ./public:/app/public
+    networks:
+      - recipe_network
+
+networks:
+  recipe_network:
+    driver: bridge
