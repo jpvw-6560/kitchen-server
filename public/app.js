@@ -972,6 +972,18 @@ function setupModals() {
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => {
       const modal = btn.closest('.modal');
+      
+      // Si on ferme la modale de plat et qu'on était en train de créer depuis le menu
+      if (modal.id === 'modal-plat' && creatingFromMenu) {
+        creatingFromMenu = false;
+        menuNomRecette = '';
+        modal.classList.remove('active');
+        // Rouvrir la modale de menu
+        document.getElementById('modal-menu').classList.add('active');
+        showNotification('Création annulée, retour au menu', 'info');
+        return;
+      }
+      
       // Support pour les deux systèmes : classe 'active' et style.display
       if (modal.classList.contains('active')) {
         modal.classList.remove('active');
@@ -985,6 +997,17 @@ function setupModals() {
   document.querySelectorAll('.modal').forEach(modal => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
+        // Si on ferme la modale de plat et qu'on était en train de créer depuis le menu
+        if (modal.id === 'modal-plat' && creatingFromMenu) {
+          creatingFromMenu = false;
+          menuNomRecette = '';
+          modal.classList.remove('active');
+          // Rouvrir la modale de menu
+          document.getElementById('modal-menu').classList.add('active');
+          showNotification('Création annulée, retour au menu', 'info');
+          return;
+        }
+        
         if (modal.classList.contains('active')) {
           modal.classList.remove('active');
         } else {
@@ -999,6 +1022,17 @@ function setupModals() {
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal').forEach(modal => {
         if (modal.classList.contains('active') || modal.style.display === 'flex') {
+          // Si on ferme la modale de plat et qu'on était en train de créer depuis le menu
+          if (modal.id === 'modal-plat' && creatingFromMenu && modal.classList.contains('active')) {
+            creatingFromMenu = false;
+            menuNomRecette = '';
+            modal.classList.remove('active');
+            // Rouvrir la modale de menu
+            document.getElementById('modal-menu').classList.add('active');
+            showNotification('Création annulée, retour au menu', 'info');
+            return;
+          }
+          
           if (modal.classList.contains('active')) {
             modal.classList.remove('active');
           } else {
@@ -1059,7 +1093,7 @@ function setupPlatForm() {
       temps_preparation: parseInt(document.getElementById('plat-temps').value) || null,
       difficulte: document.getElementById('plat-difficulte').value,
       conseils_chef: document.getElementById('plat-conseils').value,
-      nombre_personnes: parseInt(document.getElementById('plat-personnes').value) || 4,
+      nombre_personnes: parseInt(document.getElementById('plat-personnes').value) || 2,
       favori: favoriFiled ? favoriFiled.checked : false
     };
     
@@ -1127,6 +1161,43 @@ function setupPlatForm() {
       }
       
       document.getElementById('modal-plat').classList.remove('active');
+      
+      // Si on créait depuis le menu, retourner au menu avec la recette sélectionnée
+      if (creatingFromMenu) {
+        await loadPlats();
+        
+        // Récupérer le plat nouvellement créé
+        const nouveauPlatId = platId;
+        try {
+          const response = await fetch(`${API_BASE}/plats/${nouveauPlatId}`);
+          const nouveauPlat = await response.json();
+          
+          // Sélectionner automatiquement pour le menu
+          selectedPlatForMenu = nouveauPlat;
+          
+          // Rouvrir la modale de menu
+          document.getElementById('modal-menu').classList.add('active');
+          
+          // Afficher le plat sélectionné
+          displaySelectedPlat(nouveauPlat);
+          
+          // Effacer le champ de recherche
+          document.getElementById('menu-search').value = '';
+          document.getElementById('menu-recettes-list').style.display = 'none';
+          
+          showNotification(`Recette "${nouveauPlat.nom}" créée et sélectionnée !`, 'success');
+        } catch (err) {
+          console.error('Erreur lors de la récupération du plat créé:', err);
+          showNotification('Recette créée, mais erreur lors de la sélection', 'warning');
+        }
+        
+        // Réinitialiser les variables de contexte
+        creatingFromMenu = false;
+        menuNomRecette = '';
+        
+        return;
+      }
+      
       await loadPlats();
       
       // Réappliquer le filtre actif après rechargement
@@ -2264,7 +2335,18 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
             console.log("Recherche:", query);
             
             if (filtered.length === 0) {
-              resultsList.innerHTML = '<div style="padding: 1rem; color: var(--text-secondary);">Aucune recette trouvée</div>';
+              resultsList.innerHTML = `
+                <div style="padding: 1rem; color: var(--text-secondary);">
+                  <div style="margin-bottom: 0.75rem;">Aucune recette trouvée pour "${query}"</div>
+                  <button 
+                    class="btn-primary" 
+                    style="font-size: 0.875rem; padding: 0.5rem 1rem;"
+                    onclick="createRecetteFromMenu('${query.replace(/'/g, "\\'")}')"
+                  >
+                    ➕ Créer cette recette
+                  </button>
+                </div>
+              `;
               resultsList.style.display = "block";
               return;
             }
@@ -2338,6 +2420,41 @@ function clearSelectedPlat() {
 function selectPlatForMenu(id, nom, temps, difficulte) {
   selectedPlatForMenu = { id, nom, temps_preparation: temps, difficulte };
   displaySelectedPlat(selectedPlatForMenu);
+}
+
+/**
+ * Variable pour suivre si on est en train de créer une recette depuis le menu
+ */
+let creatingFromMenu = false;
+let menuNomRecette = '';
+
+/**
+ * Crée une nouvelle recette directement depuis la recherche de menu
+ * @param {string} nomRecette - Le nom de la recette à créer
+ */
+function createRecetteFromMenu(nomRecette) {
+  // Sauvegarder le contexte
+  creatingFromMenu = true;
+  menuNomRecette = nomRecette;
+  
+  // Préparer la modale de création
+  state.editingPlat = null;
+  document.getElementById('modal-plat-title').textContent = 'Nouvelle Recette';
+  document.getElementById('form-plat').reset();
+  document.getElementById('plat-ingredients-list').innerHTML = '';
+  document.getElementById('plat-preparations-list').innerHTML = '';
+  
+  // Pré-remplir le nom avec ce qui a été recherché
+  document.getElementById('plat-nom').value = nomRecette;
+  
+  // Fermer la modale de menu temporairement
+  document.getElementById('modal-menu').classList.remove('active');
+  
+  // Ouvrir la modale de création de recette
+  document.getElementById('modal-plat').classList.add('active');
+  
+  // Afficher une notification
+  showNotification(`Création de la recette "${nomRecette}"`, 'info');
 }
 
 
