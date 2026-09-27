@@ -33,6 +33,10 @@ async function initDatabase() {
         temps_preparation INT,
         difficulte ENUM('Facile', 'Moyen', 'Difficile') DEFAULT 'Moyen',
         conseils_chef TEXT,
+        feculent_id INT,
+        legume_id INT,
+        proteine_id INT,
+        preparation TEXT,
         nombre_personnes INT DEFAULT 4,
         favori BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -42,6 +46,20 @@ async function initDatabase() {
         INDEX idx_favori (favori)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+
+    const recipeColumns = [
+      ['feculent_id', 'INT NULL AFTER conseils_chef'],
+      ['legume_id', 'INT NULL AFTER feculent_id'],
+      ['proteine_id', 'INT NULL AFTER legume_id'],
+      ['preparation', 'TEXT NULL AFTER proteine_id']
+    ];
+
+    for (const [column, definition] of recipeColumns) {
+      const [existingColumn] = await connection.query('SHOW COLUMNS FROM plats LIKE ?', [column]);
+      if (existingColumn.length === 0) {
+        await connection.query(`ALTER TABLE plats ADD COLUMN ${column} ${definition}`);
+      }
+    }
     
     // Ajouter la colonne type si elle n'existe pas déjà (migration)
     try {
@@ -73,6 +91,22 @@ async function initDatabase() {
         INDEX idx_categorie (categorie)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+
+    const [duplicateRecipeNames] = await connection.query(`
+      SELECT LOWER(TRIM(nom)) AS normalized_name
+      FROM plats
+      GROUP BY LOWER(TRIM(nom))
+      HAVING COUNT(*) > 1
+      LIMIT 1
+    `);
+    const [recipeNameIndex] = await connection.query(`
+      SHOW INDEX FROM plats WHERE Key_name = 'unique_plat_nom'
+    `);
+    if (duplicateRecipeNames.length === 0 && recipeNameIndex.length === 0) {
+      await connection.query('ALTER TABLE plats ADD UNIQUE KEY unique_plat_nom (nom)');
+    } else if (duplicateRecipeNames.length > 0) {
+      console.warn('⚠️ Des recettes portent le même nom; renommez-les pour finaliser la contrainte unique.');
+    }
     
     // Table de liaison plats-ingrédients
     await connection.query(`
@@ -99,6 +133,18 @@ async function initDatabase() {
         FOREIGN KEY (plat_id) REFERENCES plats(id) ON DELETE CASCADE,
         INDEX idx_plat_ordre (plat_id, ordre)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    await connection.query('SET SESSION group_concat_max_len = 65535');
+    await connection.query(`
+      UPDATE plats p
+      SET p.preparation = (
+        SELECT GROUP_CONCAT(pr.description ORDER BY pr.ordre SEPARATOR '\n\n')
+        FROM preparations pr
+        WHERE pr.plat_id = p.id
+      )
+      WHERE p.preparation IS NULL
+        AND EXISTS (SELECT 1 FROM preparations pr WHERE pr.plat_id = p.id)
     `);
     
     // Table des médias

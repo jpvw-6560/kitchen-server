@@ -139,7 +139,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupIngredientForm();
   setupCalendrier();
   setupEditModeToggle();
-  setupCategoriesHandlers();
   setupFilterToggle();
   updateEditModeUI();  // Initialiser l'état des boutons
 });
@@ -173,15 +172,6 @@ async function loadConfig() {
   try {
     const response = await fetch(`${API_BASE}/config`);
     state.config = await response.json();
-    
-    // Remplir les select d'unités
-    const uniteSelects = document.querySelectorAll('#ingredient-unite');
-    uniteSelects.forEach(select => {
-      select.innerHTML = state.config.unites.map(u => `<option value="${u}">${u}</option>`).join('');
-    });
-    
-    // Charger les catégories depuis la table categories
-    await loadCategoriesDropdown();
   } catch (err) {
     console.error('Erreur chargement config:', err);
   }
@@ -215,6 +205,7 @@ async function loadIngredients() {
     const response = await fetch(`${API_BASE}/ingredients`);
     state.ingredients = await response.json();
     renderIngredients();
+    populateRecipeComponentSelects();
   } catch (err) {
     console.error('Erreur chargement ingrédients:', err);
   }
@@ -401,7 +392,7 @@ function updateEditModeUI() {
     // Filtrer par nom/description
     if (searchQuery) {
       filtered = filtered.filter(p => 
-        p.nom.toLowerCase().includes(searchQuery) || 
+        matchesRecipeSearch(p, searchQuery) ||
         (p.description && p.description.toLowerCase().includes(searchQuery))
       );
     }
@@ -409,7 +400,7 @@ function updateEditModeUI() {
     // Filtrer par ingrédient
     if (ingredientFilter) {
       filtered = filtered.filter(p => {
-        return p.ingredients_list && p.ingredients_list.toLowerCase().includes(ingredientFilter);
+        return matchesRecipeSearch(p, ingredientFilter);
       });
     }
     
@@ -417,6 +408,20 @@ function updateEditModeUI() {
   } else if (state.currentView === 'ingredients') {
     renderIngredients();
   }
+}
+
+function matchesRecipeSearch(plat, query) {
+  const searchableText = [
+    plat.nom,
+    plat.feculent_nom,
+    plat.legume_nom,
+    plat.proteine_nom,
+    plat.composants_list,
+    plat.ingredients_list
+  ].filter(Boolean).join(' ').toLocaleLowerCase('fr');
+
+  return query.toLocaleLowerCase('fr').split(/\s+/).filter(Boolean)
+    .every(term => searchableText.includes(term));
 }
 
 // Rendu des plats
@@ -466,6 +471,7 @@ function renderPlats(platsToRender = state.plats) {
       </div>
       ${plat.photo_principale ? `<img src="/${plat.photo_principale}" alt="${plat.nom}" class="card-photo">` : ''}
       ${plat.description ? `<p class="card-description">${plat.description}</p>` : ''}
+      ${plat.composants_list ? `<p class="card-components">${plat.composants_list}</p>` : ''}
       <div class="card-meta">
         ${plat.temps_preparation ? `<span>⏱ ${plat.temps_preparation} min</span>` : ''}
         <span>👥 ${plat.nombre_personnes} pers.</span>
@@ -511,90 +517,27 @@ function renderFavoris(favoris) {
   `).join('');
 }
 
-// Rendu des ingrédients avec accordéon par catégorie
+// Rendu de la liste alphabétique des ingrédients
 async function renderIngredients(ingredientsToRender = state.ingredients) {
   const container = document.getElementById('ingredients-list');
-  
-  // Charger les catégories si pas encore en cache
-  if (state.categories.length === 0) {
-    try {
-      const response = await fetch(`${API_BASE}/ingredients/categories`);
-      state.categories = await response.json();
-    } catch (err) {
-      console.error('Erreur chargement catégories:', err);
-    }
-  }
-  
-  // Utiliser les catégories du cache
-  const allCategories = state.categories;
-  
-  // Grouper les ingrédients par catégorie
-  const grouped = {};
-  
-  // Initialiser toutes les catégories (même vides)
-  allCategories.forEach(cat => {
-    grouped[cat] = [];
-  });
-  
-  // Ajouter les ingrédients à leurs catégories
-  ingredientsToRender.forEach(ing => {
-    const cat = ing.categorie || 'Autres';
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push(ing);
-  });
-  
-  // Trier les catégories alphabétiquement et filtrer les vides si on fait une recherche
-  const sortedCategories = Object.keys(grouped)
-    .filter(cat => ingredientsToRender.length === state.ingredients.length || grouped[cat].length > 0)
-    .sort();
-  
-  container.innerHTML = sortedCategories.map(categorie => {
-    const ingredients = grouped[categorie];
-    const count = ingredients.length;
-    const categoryId = categorie.replace(/\s+/g, '-').toLowerCase();
-    
-    // Auto-ouvrir les catégories lors d'une recherche
-    const isSearching = ingredientsToRender.length < state.ingredients.length;
-    const shouldOpen = isSearching && count > 0;
-    
-    return `
-      <div class="categorie-accordion">
-        <button class="categorie-header" onclick="toggleCategorie('${categoryId}')">
-          <span class="categorie-icon">${shouldOpen ? '▼' : '▶'}</span>
-          <span class="categorie-name">${categorie}</span>
-          <span class="categorie-count">(${count})</span>
-        </button>
-        <div class="categorie-content ${shouldOpen ? 'open' : ''}" id="cat-${categoryId}">
-          ${count === 0 ? 
-            '<p style="text-align: center; color: var(--text-secondary); padding: 1rem; font-style: italic;">Aucun ingrédient dans cette catégorie</p>' :
-            `<table class="ingredients-table">
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Unité</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${ingredients.map(ing => `
-                  <tr>
-                    <td>${ing.nom}</td>
-                    <td>${ing.unite || '-'}</td>
-                    <td>
-                      <button class="btn-icon" onclick="editIngredient(${ing.id})" title="Modifier" 
-                              ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
-                      <button class="btn-icon" onclick="deleteIngredient(${ing.id})" title="Supprimer" 
-                              ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>🗑️</button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>`
-          }
-        </div>
-      </div>
-    `;
-  }).join('');
+  container.innerHTML = `
+    <table class="ingredients-table">
+      <thead><tr><th>Nom</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${ingredientsToRender.map(ingredient => `
+          <tr>
+            <td>${ingredient.nom}</td>
+            <td>
+              <button class="btn-icon" onclick="editIngredient(${ingredient.id})" title="Modifier"
+                      ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>✏️</button>
+              <button class="btn-icon" onclick="deleteIngredient(${ingredient.id})" title="Supprimer"
+                      ${!state.editMode ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>🗑️</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 // Toggle catégorie d'ingrédients
@@ -773,7 +716,7 @@ function setupSearchHandlers() {
     // Filtrer par nom/description
     if (searchQuery) {
       filtered = filtered.filter(p => 
-        p.nom.toLowerCase().includes(searchQuery) || 
+        matchesRecipeSearch(p, searchQuery) ||
         (p.description && p.description.toLowerCase().includes(searchQuery))
       );
     }
@@ -782,7 +725,7 @@ function setupSearchHandlers() {
     if (ingredientFilter) {
       filtered = filtered.filter(p => {
         // Vérifier si le plat contient l'ingrédient recherché
-        return p.ingredients_list && p.ingredients_list.toLowerCase().includes(ingredientFilter);
+        return matchesRecipeSearch(p, ingredientFilter);
       });
     }
     
@@ -931,8 +874,6 @@ async function editIngredient(ingredientId) {
     
     // Remplir le formulaire
     document.getElementById('ingredient-nom').value = ingredient.nom;
-    document.getElementById('ingredient-unite').value = ingredient.unite || '';
-    document.getElementById('ingredient-categorie').value = ingredient.categorie || '';
     
     // Stocker l'ID pour l'édition
     state.editingIngredient = ingredientId;
@@ -1053,7 +994,7 @@ function setupModals() {
     document.getElementById('modal-plat-title').textContent = 'Nouvelle Recette';
     document.getElementById('form-plat').reset();
     document.getElementById('plat-ingredients-list').innerHTML = '';
-    document.getElementById('plat-preparations-list').innerHTML = '';
+    populateRecipeComponentSelects();
     document.getElementById('modal-plat').classList.add('active');
   });
   
@@ -1068,14 +1009,123 @@ function setupModals() {
     document.getElementById('modal-ingredient').classList.add('active');
   });
 
-  // Ouverture gestion catégories
-  document.getElementById('btn-manage-categories').addEventListener('click', () => {
-    if (!state.editMode) {
-      showNotification('Veuillez activer le mode édition pour gérer les catégories.', 'warning');
+}
+
+function populateRecipeComponentSelects(values = null) {
+  ['feculent', 'legume', 'proteine'].forEach(component => {
+    const hiddenInput = document.getElementById(`plat-${component}`);
+    const searchInput = document.getElementById(`plat-${component}-search`);
+    if (hiddenInput && searchInput) {
+      const selectedValue = values ? values[component] : hiddenInput.value;
+      const ingredient = state.ingredients.find(item => item.id === Number(selectedValue));
+      selectRecipeComponent(component, ingredient?.id || '', ingredient?.nom || '');
+
+      if (!searchInput.dataset.initialized) {
+        searchInput.addEventListener('focus', () => renderRecipeComponentResults(component));
+        searchInput.addEventListener('input', () => {
+          hiddenInput.value = '';
+          renderRecipeComponentResults(component);
+        });
+        searchInput.addEventListener('keydown', event => {
+          if (event.key === 'Escape') {
+            hideRecipeComponentResults(component);
+          } else if (event.key === 'Enter') {
+            const firstResult = document.querySelector(`#plat-${component}-results button`);
+            if (firstResult) {
+              event.preventDefault();
+              firstResult.click();
+            }
+          }
+        });
+        searchInput.dataset.initialized = 'true';
+      }
+    }
+  });
+
+  if (!document.body.dataset.componentSearchOutsideClick) {
+    document.addEventListener('pointerdown', event => {
+      document.querySelectorAll('.component-search-results.open').forEach(results => {
+        const componentSearch = results.closest('.component-search');
+        if (!componentSearch.contains(event.target)) {
+          results.classList.remove('open');
+        }
+      });
+    });
+    document.body.dataset.componentSearchOutsideClick = 'true';
+  }
+}
+
+function selectRecipeComponent(component, ingredientId, ingredientName) {
+  document.getElementById(`plat-${component}`).value = ingredientId;
+  document.getElementById(`plat-${component}-search`).value = ingredientName;
+  hideRecipeComponentResults(component);
+}
+
+function hideRecipeComponentResults(component) {
+  document.getElementById(`plat-${component}-results`)?.classList.remove('open');
+}
+
+function renderRecipeComponentResults(component) {
+  const searchInput = document.getElementById(`plat-${component}-search`);
+  const results = document.getElementById(`plat-${component}-results`);
+  const query = searchInput.value.trim();
+  const normalizedQuery = query.toLocaleLowerCase('fr');
+  const matches = [...state.ingredients]
+    .filter(ingredient => ingredient.nom.toLocaleLowerCase('fr').includes(normalizedQuery))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+    .slice(0, 8);
+
+  results.replaceChildren();
+  matches.forEach(ingredient => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'component-search-option';
+    button.textContent = ingredient.nom;
+    button.addEventListener('click', () => {
+      selectRecipeComponent(component, ingredient.id, ingredient.nom);
+    });
+    results.appendChild(button);
+  });
+
+  const exactMatch = state.ingredients.some(
+    ingredient => ingredient.nom.toLocaleLowerCase('fr') === normalizedQuery
+  );
+  if (query && !exactMatch) {
+    const createButton = document.createElement('button');
+    createButton.type = 'button';
+    createButton.className = 'component-search-option component-search-create';
+    createButton.textContent = `Créer « ${query} »`;
+    createButton.addEventListener('click', () => createRecipeComponent(component, query));
+    results.appendChild(createButton);
+  }
+
+  results.classList.toggle('open', results.childElementCount > 0);
+}
+
+async function createRecipeComponent(component, name) {
+  try {
+    const response = await fetch(`${API_BASE}/ingredients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nom: name })
+    });
+    const result = await response.json();
+    if (!response.ok && response.status !== 409) {
+      showNotification(result.error || 'Erreur lors de la création', 'error');
       return;
     }
-    openCategoriesModal();
-  });
+
+    await loadIngredients();
+    const ingredientId = result.id || result.existingId;
+    const ingredient = state.ingredients.find(item => item.id === Number(ingredientId));
+    if (ingredient) {
+      selectRecipeComponent(component, ingredient.id, ingredient.nom);
+      showNotification(`Ingrédient « ${ingredient.nom} » créé et sélectionné`, 'success');
+    }
+  } catch (err) {
+    console.error('Erreur création composant:', err);
+    showNotification('Erreur lors de la création de l\'ingrédient', 'error');
+  }
 }
 
 // Formulaire plat
@@ -1094,7 +1144,11 @@ function setupPlatForm() {
       difficulte: document.getElementById('plat-difficulte').value,
       conseils_chef: document.getElementById('plat-conseils').value,
       nombre_personnes: parseInt(document.getElementById('plat-personnes').value) || 2,
-      favori: favoriFiled ? favoriFiled.checked : false
+      favori: favoriFiled ? favoriFiled.checked : false,
+      feculent_id: parseInt(document.getElementById('plat-feculent').value) || null,
+      legume_id: parseInt(document.getElementById('plat-legume').value) || null,
+      proteine_id: parseInt(document.getElementById('plat-proteine').value) || null,
+      preparation: document.getElementById('plat-preparation').value.trim()
     };
     
     try {
@@ -1110,14 +1164,17 @@ function setupPlatForm() {
       });
       
       const result = await response.json();
+      if (!response.ok) {
+        showNotification(result.error || 'Erreur lors de la sauvegarde', 'error');
+        return;
+      }
       const platId = state.editingPlat || result.id;
       
       // Gérer les ingrédients
       if (platId) {
-        // Si édition, vider d'abord les anciens ingrédients et préparations
+        // Si édition, vider d'abord les anciens ingrédients
         if (state.editingPlat) {
           await fetch(`${API_BASE}/plats/${platId}/ingredients`, { method: 'DELETE' });
-          await fetch(`${API_BASE}/plats/${platId}/preparations`, { method: 'DELETE' });
         }
         
         const ingredientRows = document.querySelectorAll('#plat-ingredients-list .ingredient-row');
@@ -1139,25 +1196,6 @@ function setupPlatForm() {
           }
         }
         
-        // Gérer les préparations
-        const preparationRows = document.querySelectorAll('#plat-preparations-list .preparation-row');
-        for (let i = 0; i < preparationRows.length; i++) {
-          const row = preparationRows[i];
-          const description = row.querySelector('textarea');
-          const duree = row.querySelector('input[type="number"]');
-          
-          if (description.value) {
-            await fetch(`${API_BASE}/plats/${platId}/preparations`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                ordre: i + 1,
-                description: description.value,
-                duree_minutes: duree.value ? parseInt(duree.value) : null
-              })
-            });
-          }
-        }
       }
       
       document.getElementById('modal-plat').classList.remove('active');
@@ -1217,7 +1255,7 @@ function setupPlatForm() {
       // Filtrer par nom/description
       if (searchQuery) {
         filtered = filtered.filter(p => 
-          p.nom.toLowerCase().includes(searchQuery) || 
+          matchesRecipeSearch(p, searchQuery) ||
           (p.description && p.description.toLowerCase().includes(searchQuery))
         );
       }
@@ -1225,7 +1263,7 @@ function setupPlatForm() {
       // Filtrer par ingrédient
       if (ingredientFilter) {
         filtered = filtered.filter(p => {
-          return p.ingredients_list && p.ingredients_list.toLowerCase().includes(ingredientFilter);
+          return matchesRecipeSearch(p, ingredientFilter);
         });
       }
       
@@ -1239,11 +1277,6 @@ function setupPlatForm() {
   // Ajouter ingrédient
   document.getElementById('btn-add-ingredient').addEventListener('click', () => {
     addIngredientRow();
-  });
-  
-  // Ajouter étape
-  document.getElementById('btn-add-preparation').addEventListener('click', () => {
-    addPreparationRow();
   });
   
   // Ajouter médias
@@ -1366,9 +1399,7 @@ function setupIngredientForm() {
     e.preventDefault();
     
     const ingredientData = {
-      nom: document.getElementById('ingredient-nom').value,
-      unite: document.getElementById('ingredient-unite').value,
-      categorie: document.getElementById('ingredient-categorie').value
+      nom: document.getElementById('ingredient-nom').value
     };
     
     try {
@@ -1377,11 +1408,16 @@ function setupIngredientForm() {
         : `${API_BASE}/ingredients`;
       const method = state.editingIngredient ? 'PUT' : 'POST';
       
-      await fetch(url, {
+      const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ingredientData)
       });
+      const result = await response.json();
+      if (!response.ok) {
+        showNotification(result.error || 'Erreur lors de la sauvegarde', 'error');
+        return;
+      }
       
       state.editingIngredient = null;
       document.getElementById('modal-ingredient').classList.remove('active');
@@ -1409,18 +1445,6 @@ async function showQuickIngredientForm() {
             <label>Nom *</label>
             <input type="text" id="quick-ingredient-nom" required autofocus>
           </div>
-          <div class="form-group">
-            <label>Unité de base</label>
-            <select id="quick-ingredient-unite">
-              ${state.config.unites.map(u => `<option value="${u}">${u}</option>`).join('')}
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Catégorie</label>
-            <select id="quick-ingredient-categorie">
-              ${state.config.categories.map(c => `<option value="${c}">${c}</option>`).join('')}
-            </select>
-          </div>
           <div class="form-actions">
             <button type="submit" class="btn-primary">💾 Créer</button>
             <button type="button" class="btn-secondary quick-cancel">Annuler</button>
@@ -1447,9 +1471,7 @@ async function showQuickIngredientForm() {
       e.preventDefault();
       
       const ingredientData = {
-        nom: document.getElementById('quick-ingredient-nom').value,
-        unite: document.getElementById('quick-ingredient-unite').value,
-        categorie: document.getElementById('quick-ingredient-categorie').value
+        nom: document.getElementById('quick-ingredient-nom').value
       };
       
       try {
@@ -1460,6 +1482,10 @@ async function showQuickIngredientForm() {
         });
         
         const result = await response.json();
+        if (!response.ok) {
+          showNotification(result.error || 'Erreur lors de la création', 'error');
+          return;
+        }
         document.body.removeChild(overlay);
         resolve({ id: result.id, ...ingredientData });
       } catch (err) {
@@ -1485,6 +1511,11 @@ function setupCalendrier() {
   document.getElementById('btn-next-week').addEventListener('click', () => {
     state.currentWeekStart = new Date(state.currentWeekStart);
     state.currentWeekStart.setDate(state.currentWeekStart.getDate() + 7);
+    loadCalendrierSemaine();
+  });
+
+  document.getElementById('btn-current-week').addEventListener('click', () => {
+    state.currentWeekStart = getMonday(new Date());
     loadCalendrierSemaine();
   });
   
@@ -1805,17 +1836,22 @@ async function viewRecette(event, platId) {
       </div>
       <div class="recette-viewer-content">
         <div class="recette-viewer-left">
-          <h2>🥕 Ingrédients</h2>
+          <h2>Ingrédients</h2>
           <div class="recette-viewer-meta">
             <span>👥 ${plat.nombre_personnes} personnes</span>
             ${plat.temps_preparation ? `<span>⏱ ${plat.temps_preparation} min</span>` : ''}
             <span class="badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
           </div>
+          <div class="recette-main-components">
+            ${plat.feculent_nom ? `<div><span>Féculent</span><strong>${plat.feculent_nom}</strong></div>` : ''}
+            ${plat.legume_nom ? `<div><span>Légume</span><strong>${plat.legume_nom}</strong></div>` : ''}
+            ${plat.proteine_nom ? `<div><span>Protéine</span><strong>${plat.proteine_nom}</strong></div>` : ''}
+          </div>
           ${plat.ingredients && plat.ingredients.length > 0 ? `
             <ul class="recette-viewer-ingredients">
               ${plat.ingredients.map(ing => `
                 <li>
-                  <span class="ingredient-quantite">${formatQuantite(ing.quantite)} ${ing.unite}</span>
+                  <span class="ingredient-quantite">${ing.quantite ? formatQuantite(ing.quantite) : ''} ${ing.unite || ''}</span>
                   <span class="ingredient-nom">${ing.nom}</span>
                 </li>
               `).join('')}
@@ -1829,118 +1865,11 @@ async function viewRecette(event, platId) {
           ` : ''}
         </div>
         <div class="recette-viewer-right">
-          <h2>📝 Préparation</h2>
-          ${plat.preparations && plat.preparations.length > 0 ? `
-            <ol class="recette-viewer-steps">
-              ${plat.preparations.map(prep => `
-                <li>
-                  <div class="step-description">${prep.description}</div>
-                  ${prep.duree_minutes ? `<div class="step-duration">⏱ ${prep.duree_minutes} min</div>` : ''}
-                </li>
-              `).join('')}
-            </ol>
-          ` : '<p>Aucune étape de préparation</p>'}
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(viewer);
-    
-    // Empêcher le scroll du body
-    document.body.style.overflow = 'hidden';
-  } catch (err) {
-    console.error('Erreur chargement recette:', err);
-    showNotification('Erreur lors du chargement de la recette', 'error');
-  }
-}
-
-/**
- * Ferme la vue pleine page
- */
-function closeRecetteViewer() {
-  const viewer = document.querySelector('.recette-viewer');
-  if (viewer) {
-    viewer.remove();
-    document.body.style.overflow = '';
-  }
-}
-
-/**
- * Affiche la vidéo de la recette
- */
-function playRecetteVideo(cheminFichier) {
-  const modal = document.createElement('div');
-  modal.className = 'media-viewer-modal';
-  modal.innerHTML = `<video src="/${cheminFichier}" controls autoplay style="max-width: 90vw; max-height: 90vh;"></video>`;
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.remove();
-  };
-  document.body.appendChild(modal);
-}
-
-/**
- * Affiche la recette en mode pleine page (mode cuisine)
- */
-async function viewRecette(event, platId) {
-  if (event) event.stopPropagation();
-  
-  try {
-    // Charger les détails complets du plat
-    const response = await fetch(`${API_BASE}/plats/${platId}`);
-    const plat = await response.json();
-    
-    // Créer la vue pleine page
-    const viewer = document.createElement('div');
-    viewer.className = 'recette-viewer';
-    
-    // Trouver la vidéo si elle existe
-    const video = plat.medias?.find(m => m.type === 'video');
-    
-    viewer.innerHTML = `
-      <div class="recette-viewer-header">
-        <h1>${plat.nom}</h1>
-        <div class="recette-viewer-actions">
-          ${video ? `<button class="btn-primary" onclick="playRecetteVideo('${video.chemin_fichier}')">🎥 Voir la vidéo</button>` : ''}
-          <button class="btn-secondary" onclick="closeRecetteViewer()">✕ Fermer</button>
-        </div>
-      </div>
-      <div class="recette-viewer-content">
-        <div class="recette-viewer-left">
-          <h2>🥕 Ingrédients</h2>
-          <div class="recette-viewer-meta">
-            <span>👥 ${plat.nombre_personnes} personnes</span>
-            ${plat.temps_preparation ? `<span>⏱ ${plat.temps_preparation} min</span>` : ''}
-            <span class="badge-${plat.difficulte.toLowerCase()}">${plat.difficulte}</span>
-          </div>
-          ${plat.ingredients && plat.ingredients.length > 0 ? `
-            <ul class="recette-viewer-ingredients">
-              ${plat.ingredients.map(ing => `
-                <li>
-                  <span class="ingredient-quantite">${formatQuantite(ing.quantite)} ${ing.unite}</span>
-                  <span class="ingredient-nom">${ing.nom}</span>
-                </li>
-              `).join('')}
-            </ul>
-          ` : '<p>Aucun ingrédient</p>'}
-          ${plat.conseils_chef ? `
-            <div class="recette-viewer-conseils">
-              <h3>💡 Conseils du chef</h3>
-              <p>${plat.conseils_chef}</p>
-            </div>
-          ` : ''}
-        </div>
-        <div class="recette-viewer-right">
-          <h2>📝 Préparation</h2>
-          ${plat.preparations && plat.preparations.length > 0 ? `
-            <ol class="recette-viewer-steps">
-              ${plat.preparations.map(prep => `
-                <li>
-                  <div class="step-description">${prep.description}</div>
-                  ${prep.duree_minutes ? `<div class="step-duration">⏱ ${prep.duree_minutes} min</div>` : ''}
-                </li>
-              `).join('')}
-            </ol>
-          ` : '<p>Aucune étape de préparation</p>'}
+          <h2>La recette</h2>
+          ${plat.description ? `<p class="recette-introduction">${plat.description}</p>` : ''}
+          ${plat.preparation
+            ? `<div class="recette-text">${plat.preparation}</div>`
+            : '<p>Aucune préparation indiquée</p>'}
         </div>
       </div>
     `;
@@ -2004,15 +1933,13 @@ async function editPlat(event, platId) {
     document.getElementById('plat-difficulte').value = plat.difficulte || 'Moyen';
     document.getElementById('plat-conseils').value = plat.conseils_chef || '';
     document.getElementById('plat-personnes').value = plat.nombre_personnes || 4;
-    
-    // Ajouter un champ caché pour le favori
-    const favoriBadge = document.createElement('div');
-    favoriBadge.innerHTML = `
-      <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
-        <input type="checkbox" id="plat-favori" ${plat.favori ? 'checked' : ''}>
-        <label for="plat-favori" style="margin: 0;">Marquer comme favori</label>
-      </div>
-    `;
+    document.getElementById('plat-favori').checked = Boolean(plat.favori);
+    document.getElementById('plat-preparation').value = plat.preparation || '';
+    populateRecipeComponentSelects({
+      feculent: plat.feculent_id,
+      legume: plat.legume_id,
+      proteine: plat.proteine_id
+    });
     
     // Remplir les ingrédients
     const ingredientsContainer = document.getElementById('plat-ingredients-list');
@@ -2057,27 +1984,6 @@ async function editPlat(event, platId) {
         });
         
         ingredientsContainer.appendChild(row);
-      });
-    }
-    
-    // Remplir les préparations
-    const preparationsContainer = document.getElementById('plat-preparations-list');
-    preparationsContainer.innerHTML = '';
-    if (plat.preparations && plat.preparations.length > 0) {
-      plat.preparations.forEach((prep, index) => {
-        const row = document.createElement('div');
-        row.className = 'preparation-row';
-        row.innerHTML = `
-          <span class="step-number" style="font-weight: 600; width: 30px;">${index + 1}.</span>
-          <textarea placeholder="Description de l'étape..." rows="2">${prep.description || ''}</textarea>
-          <input type="number" placeholder="⏱ min" style="width: 80px;" min="0" value="${prep.duree_minutes || ''}">
-          <div style="display: flex; gap: 0.25rem;">
-            <button type="button" class="btn-move-up" title="Déplacer vers le haut" onclick="movePreparationUp(this.closest('.preparation-row'))">↑</button>
-            <button type="button" class="btn-move-down" title="Déplacer vers le bas" onclick="movePreparationDown(this.closest('.preparation-row'))">↓</button>
-            <button type="button" class="btn-remove" title="Supprimer cette étape" onclick="removePreparationRow(this.closest('.preparation-row'))">✕</button>
-          </div>
-        `;
-        preparationsContainer.appendChild(row);
       });
     }
     
@@ -2276,6 +2182,7 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
   dateLabel.textContent = `${jour} ${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`;
   document.getElementById("menu-personnes").value = nbPersonnes;
   document.getElementById("menu-notes").value = notes || "";
+  document.getElementById("menu-components-search").value = "";
   document.getElementById("menu-search").value = "";
   document.getElementById("menu-recettes-list").style.display = "none";
   
@@ -2289,6 +2196,11 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
       const response = await fetch(`${API_BASE}/plats/${platId}`);
       const plat = await response.json();
       selectedPlatForMenu = plat;
+      document.getElementById("menu-components-search").value = [
+        plat.feculent_nom,
+        plat.legume_nom,
+        plat.proteine_nom
+      ].filter(Boolean).join(', ');
       displaySelectedPlat(plat);
     } catch (err) {
       console.error("Erreur chargement plat:", err);
@@ -2302,49 +2214,44 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
   
   // Initialiser la recherche si pas encore fait
   if (!menuSearchInitialized) {
+    const componentsInput = document.getElementById("menu-components-search");
     const searchInput = document.getElementById("menu-search");
     const resultsList = document.getElementById("menu-recettes-list");
     
-    if (searchInput && resultsList) {
+    if (componentsInput && searchInput && resultsList) {
       console.log("Initialisation de la recherche menu");
-      
-      searchInput.addEventListener("input", async (e) => {
+
+      const updateMenuRecipeResults = () => {
         clearTimeout(searchMenuTimeout);
-        const query = e.target.value.trim();
-        
-        console.log("Recherche:", query);
-        
-        if (query.length < 2) {
+        const componentsQuery = componentsInput.value.trim();
+        const nameQuery = searchInput.value.trim();
+
+        if (!componentsQuery && nameQuery.length < 2) {
           resultsList.style.display = "none";
           return;
         }
-        
-        searchMenuTimeout = setTimeout(async () => {
+
+        searchMenuTimeout = setTimeout(() => {
+          const filtered = state.plats.filter(plat => {
+            const componentsMatch = !componentsQuery || matchesMainComponents(plat, componentsQuery);
+            const nameMatch = !nameQuery || plat.nom.toLocaleLowerCase('fr')
+              .includes(nameQuery.toLocaleLowerCase('fr'));
+            return componentsMatch && nameMatch;
+          });
+
           try {
-            const response = await fetch(`${API_BASE}/plats`);
-            const plats = await response.json();
-            
-            console.log("Plats récupérés:", plats.length);
-            console.log("Noms des plats:", plats.map(p => p.nom).join(", "));
-            
-            const filtered = plats.filter(p => 
-              p.nom.toLowerCase().includes(query.toLowerCase())
-            );
-            
-            console.log("Plats filtrés:", filtered.length);
-            console.log("Recherche:", query);
-            
             if (filtered.length === 0) {
+              const searchDescription = [componentsQuery, nameQuery].filter(Boolean).join(' / ');
               resultsList.innerHTML = `
                 <div style="padding: 1rem; color: var(--text-secondary);">
-                  <div style="margin-bottom: 0.75rem;">Aucune recette trouvée pour "${query}"</div>
-                  <button 
+                  <div style="margin-bottom: 0.75rem;">Aucun plat trouvé pour "${searchDescription}"</div>
+                  ${nameQuery ? `<button
                     class="btn-primary" 
                     style="font-size: 0.875rem; padding: 0.5rem 1rem;"
-                    onclick="createRecetteFromMenu('${query.replace(/'/g, "\\'")}')"
+                    onclick="createRecetteFromMenu('${nameQuery.replace(/'/g, "\\'")}')"
                   >
-                    ➕ Créer cette recette
-                  </button>
+                    ➕ Créer ce plat
+                  </button>` : ''}
                 </div>
               `;
               resultsList.style.display = "block";
@@ -2352,11 +2259,12 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
             }
             
             resultsList.innerHTML = filtered.map(plat => {
-              const nomEchape = plat.nom.replace(/'/g, "\\'");
-              const diffEchape = (plat.difficulte || "").replace(/'/g, "\\'");
               return `
-                <div class="search-result-item" onclick="selectPlatForMenu(${plat.id}, '${nomEchape}', ${plat.temps_preparation || 0}, '${diffEchape}')">
+                <div class="search-result-item" onclick="selectPlatForMenu(${plat.id})">
                   <strong>${plat.nom}</strong>
+                  ${plat.composants_list
+                    ? `<div class="menu-result-components">${plat.composants_list}</div>`
+                    : '<div class="menu-result-components menu-result-legacy">Composants à compléter</div>'}
                   <div style="font-size: 0.875rem; color: var(--text-secondary);">
                     ${plat.temps_preparation ? `⏱️ ${plat.temps_preparation} min` : ""} 
                     ${plat.difficulte ? `• ${plat.difficulte}` : ""}
@@ -2370,7 +2278,18 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
             console.error("Erreur recherche:", err);
           }
         }, 300);
-      });
+      };
+
+      const handleMenuSearchInput = () => {
+        selectedPlatForMenu = null;
+        document.getElementById("menu-selected-plat").innerHTML = "";
+        updateMenuRecipeResults();
+      };
+
+      componentsInput.addEventListener("input", handleMenuSearchInput);
+      searchInput.addEventListener("input", handleMenuSearchInput);
+      componentsInput.addEventListener("focus", updateMenuRecipeResults);
+      searchInput.addEventListener("focus", updateMenuRecipeResults);
       
       menuSearchInitialized = true;
     }
@@ -2379,7 +2298,26 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
   modal.classList.add('active');
   
   // Focus sur le champ de recherche
-  setTimeout(() => document.getElementById("menu-search").focus(), 100);
+  setTimeout(() => document.getElementById("menu-components-search").focus(), 100);
+}
+
+function matchesMainComponents(plat, query) {
+  const structuredComponents = [plat.feculent_nom, plat.legume_nom, plat.proteine_nom]
+    .filter(Boolean)
+    .join(' ');
+  const searchableComponents = structuredComponents || [plat.ingredients_list, plat.nom]
+    .filter(Boolean)
+    .join(' ');
+  const normalizedComponents = normalizeMenuComponentText(searchableComponents);
+  const terms = normalizeMenuComponentText(query).split(/[\s,;]+/).filter(Boolean);
+  return terms.every(term => normalizedComponents.includes(term));
+}
+
+function normalizeMenuComponentText(value) {
+  return value.toLocaleLowerCase('fr')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\bpommes? de terre\b/g, 'pdt');
 }
 
 /**
@@ -2392,6 +2330,7 @@ function displaySelectedPlat(plat) {
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <strong>${plat.nom}</strong>
+          ${plat.composants_list ? `<div class="menu-result-components">${plat.composants_list}</div>` : ''}
           <div style="font-size: 0.875rem; color: var(--text-secondary);">
             ${plat.temps_preparation ? `⏱️ ${plat.temps_preparation} min` : ""} 
             ${plat.difficulte ? `• ${plat.difficulte}` : ""}
@@ -2417,9 +2356,12 @@ function clearSelectedPlat() {
 /**
  * Sélectionne un plat pour le menu
  */
-function selectPlatForMenu(id, nom, temps, difficulte) {
-  selectedPlatForMenu = { id, nom, temps_preparation: temps, difficulte };
-  displaySelectedPlat(selectedPlatForMenu);
+function selectPlatForMenu(id) {
+  selectedPlatForMenu = state.plats.find(plat => plat.id === id);
+  if (selectedPlatForMenu) {
+    document.getElementById("menu-search").value = selectedPlatForMenu.nom;
+    displaySelectedPlat(selectedPlatForMenu);
+  }
 }
 
 /**
@@ -2442,7 +2384,7 @@ function createRecetteFromMenu(nomRecette) {
   document.getElementById('modal-plat-title').textContent = 'Nouvelle Recette';
   document.getElementById('form-plat').reset();
   document.getElementById('plat-ingredients-list').innerHTML = '';
-  document.getElementById('plat-preparations-list').innerHTML = '';
+  populateRecipeComponentSelects();
   
   // Pré-remplir le nom avec ce qui a été recherché
   document.getElementById('plat-nom').value = nomRecette;

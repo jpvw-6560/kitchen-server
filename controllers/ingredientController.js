@@ -68,6 +68,9 @@ async function getByCategorie(req, res) {
  */
 async function createIngredient(req, res) {
   try {
+    if (!req.body.nom || !req.body.nom.trim()) {
+      return res.status(400).json({ error: 'Le nom de l\'ingrédient est requis' });
+    }
     // Vérifier si l'ingrédient existe déjà
     const existing = await Ingredient.existsByName(req.body.nom);
     if (existing) {
@@ -90,6 +93,13 @@ async function createIngredient(req, res) {
  */
 async function updateIngredient(req, res) {
   try {
+    if (!req.body.nom || !req.body.nom.trim()) {
+      return res.status(400).json({ error: 'Le nom de l\'ingrédient est requis' });
+    }
+    const existing = await Ingredient.existsByName(req.body.nom, req.params.id);
+    if (existing) {
+      return res.status(409).json({ error: 'Un ingrédient avec ce nom existe déjà' });
+    }
     await Ingredient.update(req.params.id, req.body);
     res.json({ message: 'Ingrédient mis à jour avec succès' });
   } catch (err) {

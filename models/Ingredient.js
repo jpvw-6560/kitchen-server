@@ -9,8 +9,8 @@ class Ingredient {
    */
   static async getAll() {
     const [rows] = await pool.query(`
-      SELECT * FROM ingredients
-      ORDER BY categorie, nom
+      SELECT id, nom FROM ingredients
+      ORDER BY nom
     `);
     return rows;
   }
@@ -50,7 +50,7 @@ class Ingredient {
    * Crée un nouvel ingrédient
    */
   static async create(ingredientData) {
-    const { nom, unite, categorie } = ingredientData;
+    const { nom } = ingredientData;
     // Forcer le nom en minuscules et normaliser les caractères spéciaux
     const nomLowercase = nom.toLowerCase()
       .replace(/œ/g, 'oe')
@@ -58,8 +58,8 @@ class Ingredient {
       .trim()
       .replace(/\s+/g, ' ');
     const [result] = await pool.query(
-      'INSERT INTO ingredients (nom, unite, categorie) VALUES (?, ?, ?)',
-      [nomLowercase, unite, categorie]
+      'INSERT INTO ingredients (nom) VALUES (?)',
+      [nomLowercase]
     );
     return result.insertId;
   }
@@ -68,7 +68,7 @@ class Ingredient {
    * Met à jour un ingrédient
    */
   static async update(id, ingredientData) {
-    const { nom, unite, categorie } = ingredientData;
+    const { nom } = ingredientData;
     // Forcer le nom en minuscules et normaliser les caractères spéciaux
     const nomLowercase = nom.toLowerCase()
       .replace(/œ/g, 'oe')
@@ -76,8 +76,8 @@ class Ingredient {
       .trim()
       .replace(/\s+/g, ' ');
     await pool.query(
-      'UPDATE ingredients SET nom = ?, unite = ?, categorie = ? WHERE id = ?',
-      [nomLowercase, unite, categorie, id]
+      'UPDATE ingredients SET nom = ? WHERE id = ?',
+      [nomLowercase, id]
     );
     return true;
   }
@@ -86,6 +86,12 @@ class Ingredient {
    * Supprime un ingrédient
    */
   static async delete(id) {
+    await pool.query(`
+      UPDATE plats SET
+        feculent_id = IF(feculent_id = ?, NULL, feculent_id),
+        legume_id = IF(legume_id = ?, NULL, legume_id),
+        proteine_id = IF(proteine_id = ?, NULL, proteine_id)
+    `, [id, id, id]);
     await pool.query('DELETE FROM ingredients WHERE id = ?', [id]);
     return true;
   }
@@ -93,8 +99,14 @@ class Ingredient {
   /**
    * Vérifie si un ingrédient existe par nom
    */
-  static async existsByName(nom) {
-    const [rows] = await pool.query('SELECT id FROM ingredients WHERE LOWER(nom) = LOWER(?)', [nom]);
+  static async existsByName(nom, excludedId = null) {
+    const params = [nom];
+    let query = 'SELECT id FROM ingredients WHERE LOWER(nom) = LOWER(?)';
+    if (excludedId) {
+      query += ' AND id != ?';
+      params.push(excludedId);
+    }
+    const [rows] = await pool.query(query, params);
     return rows.length > 0 ? rows[0] : null;
   }
 

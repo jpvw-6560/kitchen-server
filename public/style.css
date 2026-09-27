@@ -942,6 +942,68 @@ tbody tr:hover {
   gap: 1rem;
 }
 
+.components-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.component-search {
+  position: relative;
+}
+
+.component-search-results {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow);
+  z-index: 20;
+}
+
+.component-search-results.open {
+  display: block;
+}
+
+.component-search-option {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.component-search-option:last-child {
+  border-bottom: 0;
+}
+
+.component-search-option:hover,
+.component-search-option:focus {
+  background: var(--bg-primary);
+  color: var(--primary);
+  outline: none;
+}
+
+.component-search-create {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.card-components {
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+}
+
 .form-section {
   margin: 2rem 0;
   padding: 1.5rem;
@@ -1381,10 +1443,16 @@ tbody tr:hover {
     grid-row: 1;
     padding: 0.75rem 1rem !important;
   }
+
+  #btn-current-week {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+  }
   
   #btn-clear-week {
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
     margin-left: 0 !important;
     width: 100%;
   }
@@ -1599,7 +1667,7 @@ tbody tr:hover {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--bg-primary);
+  background: #17201a;
   z-index: 10000;
   display: flex;
   flex-direction: column;
@@ -1608,19 +1676,20 @@ tbody tr:hover {
 }
 
 .recette-viewer-header {
-  background: var(--bg-secondary);
+  background: #f4f0e6;
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1px solid #cfc7b7;
   flex-shrink: 0;
 }
 
 .recette-viewer-header h1 {
   font-size: 2rem;
   margin: 0;
-  color: var(--primary);
+  color: #24352a;
+  font-family: Georgia, 'Times New Roman', serif;
 }
 
 .recette-viewer-actions {
@@ -1630,29 +1699,35 @@ tbody tr:hover {
 
 .recette-viewer-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  padding: 2rem;
-  overflow: hidden;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+  gap: 0;
+  width: min(1180px, calc(100% - 3rem));
+  margin: 2rem auto;
+  padding: 0;
+  overflow: auto;
   height: 100%;
+  background: linear-gradient(90deg, #f3efe5 0%, #fffdf7 49.7%, #ded7c8 50%, #fffdf7 50.3%, #f3efe5 100%);
+  color: #242820;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
 }
 
 .recette-viewer-left,
 .recette-viewer-right {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--radius);
+  background: transparent;
+  padding: 3rem;
+  border-radius: 0;
   overflow-y: auto;
   height: 100%;
 }
 
 .recette-viewer-left h2,
 .recette-viewer-right h2 {
-  color: var(--primary);
+  color: #344e3d;
   margin-bottom: 1.5rem;
   font-size: 1.75rem;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1px solid #b9b29f;
   padding-bottom: 0.5rem;
+  font-family: Georgia, 'Times New Roman', serif;
 }
 
 .recette-viewer-meta {
@@ -1660,7 +1735,32 @@ tbody tr:hover {
   gap: 1.5rem;
   margin-bottom: 2rem;
   font-size: 1.1rem;
-  color: var(--text-secondary);
+  color: #62675e;
+  flex-wrap: wrap;
+}
+
+.recette-main-components {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #d7d0c1;
+}
+
+.recette-main-components div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.recette-main-components span {
+  color: #72776d;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.recette-main-components strong {
+  color: #293c30;
 }
 
 .recette-viewer-ingredients {
@@ -1670,29 +1770,29 @@ tbody tr:hover {
 }
 
 .recette-viewer-ingredients li {
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-  background: var(--bg-primary);
-  border-radius: 8px;
+  padding: 0.55rem 0;
+  margin-bottom: 0;
+  background: transparent;
+  border-bottom: 1px solid #ddd6c8;
   display: flex;
   gap: 1rem;
   font-size: 1.1rem;
 }
 
 .ingredient-quantite {
-  color: var(--primary);
+  color: #496b54;
   font-weight: 700;
   min-width: 80px;
 }
 
 .ingredient-nom {
-  color: var(--text-primary);
+  color: #242820;
 }
 
 .recette-viewer-conseils {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: var(--bg-primary);
+  background: rgba(73, 107, 84, 0.08);
   border-radius: 8px;
   border-left: 4px solid var(--warning);
 }
@@ -1704,7 +1804,7 @@ tbody tr:hover {
 }
 
 .recette-viewer-conseils p {
-  color: var(--text-secondary);
+  color: #53584f;
   line-height: 1.6;
   font-size: 1.05rem;
 }
@@ -1756,16 +1856,39 @@ tbody tr:hover {
   font-style: italic;
 }
 
+.recette-introduction {
+  color: #62675e;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+
+.recette-text {
+  color: #242820;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.08rem;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
 /* Responsive pour tablette */
 @media (max-width: 1024px) {
   .recette-viewer-content {
     grid-template-columns: 1fr;
     gap: 1rem;
+    width: calc(100% - 2rem);
+    margin: 1rem auto;
+    background: #f7f3e9;
   }
   
   .recette-viewer-left,
   .recette-viewer-right {
     height: auto;
+  }
+
+  .components-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1833,6 +1956,17 @@ tbody tr:hover {
 }
 
 .search-result-item:last-child {
+  .menu-result-components {
+    margin-top: 0.2rem;
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .menu-result-legacy {
+    color: var(--warning);
+    font-weight: 500;
+  }
   border-bottom: none;
 }
 

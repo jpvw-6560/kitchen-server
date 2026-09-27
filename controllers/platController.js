@@ -67,6 +67,13 @@ async function getFavoris(req, res) {
  */
 async function createPlat(req, res) {
   try {
+    if (!req.body.nom || !req.body.nom.trim()) {
+      return res.status(400).json({ error: 'Le nom de la recette est requis' });
+    }
+    const existing = await Plat.findByName(req.body.nom);
+    if (existing) {
+      return res.status(409).json({ error: 'Une recette avec ce nom existe déjà' });
+    }
     const platId = await Plat.create(req.body);
     res.status(201).json({ id: platId, message: 'Plat créé avec succès' });
   } catch (err) {
@@ -80,6 +87,13 @@ async function createPlat(req, res) {
  */
 async function updatePlat(req, res) {
   try {
+    if (!req.body.nom || !req.body.nom.trim()) {
+      return res.status(400).json({ error: 'Le nom de la recette est requis' });
+    }
+    const existing = await Plat.findByName(req.body.nom, req.params.id);
+    if (existing) {
+      return res.status(409).json({ error: 'Une recette avec ce nom existe déjà' });
+    }
     await Plat.update(req.params.id, req.body);
     res.json({ message: 'Plat mis à jour avec succès' });
   } catch (err) {
@@ -202,6 +216,10 @@ async function duplicatePlat(req, res) {
     const { nom } = req.body;
     if (!nom) {
       return res.status(400).json({ error: 'Le nouveau nom est requis' });
+    }
+    const existing = await Plat.findByName(nom);
+    if (existing) {
+      return res.status(409).json({ error: 'Une recette avec ce nom existe déjà' });
     }
     
     const newPlatId = await Plat.duplicate(req.params.id, nom);

@@ -107,6 +107,7 @@
           <button class="btn-secondary" id="btn-prev-week"><span class="btn-text-full">◀ Semaine précédente</span><span class="btn-text-short">◀</span></button>
           <span id="current-week" class="week-label"></span>
           <button class="btn-secondary" id="btn-next-week"><span class="btn-text-full">Semaine suivante ▶</span><span class="btn-text-short">▶</span></button>
+          <button class="btn-secondary" id="btn-current-week">📅 Cette semaine</button>
           <button class="btn-danger" id="btn-clear-week" style="margin-left: 1rem;">🗑️ Vider la semaine</button>
         </div>
       </div>
@@ -143,14 +144,6 @@
 
         <div class="sidebar-section">
           <button class="btn-primary btn-fullwidth" id="btn-new-ingredient">➕ Nouvel Ingrédient</button>
-        </div>
-
-        <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
-
-        <h3>📂 Catégories</h3>
-        
-        <div class="sidebar-section">
-          <button class="btn-secondary btn-fullwidth" id="btn-manage-categories">⚙️ Gérer les catégories</button>
         </div>
         </div>
       </aside>
@@ -229,16 +222,45 @@
 
         <!-- Section Ingrédients -->
         <div class="form-section">
-          <h3>🥕 Ingrédients</h3>
+          <h3>🥕 Composants principaux</h3>
+          <div class="form-grid components-grid">
+            <div class="form-group">
+              <label for="plat-feculent-search">Féculent</label>
+              <div class="component-search">
+                <input type="hidden" id="plat-feculent">
+                <input type="text" id="plat-feculent-search" placeholder="Rechercher..." autocomplete="off">
+                <div id="plat-feculent-results" class="component-search-results" role="listbox"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="plat-legume-search">Légume</label>
+              <div class="component-search">
+                <input type="hidden" id="plat-legume">
+                <input type="text" id="plat-legume-search" placeholder="Rechercher..." autocomplete="off">
+                <div id="plat-legume-results" class="component-search-results" role="listbox"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="plat-proteine-search">Protéine</label>
+              <div class="component-search">
+                <input type="hidden" id="plat-proteine">
+                <input type="text" id="plat-proteine-search" placeholder="Rechercher..." autocomplete="off">
+                <div id="plat-proteine-results" class="component-search-results" role="listbox"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>🧺 Liste complète des ingrédients</h3>
           <div id="plat-ingredients-list"></div>
           <button type="button" class="btn-secondary" id="btn-add-ingredient">➕ Ajouter un ingrédient</button>
         </div>
 
         <!-- Section Préparation -->
         <div class="form-section">
-          <h3>📝 Étapes de préparation</h3>
-          <div id="plat-preparations-list"></div>
-          <button type="button" class="btn-secondary" id="btn-add-preparation">➕ Ajouter une étape</button>
+          <h3>📝 Recette</h3>
+          <textarea id="plat-preparation" rows="12" placeholder="Décrire la préparation de la recette..."></textarea>
         </div>
 
         <!-- Section Médias (Photos & Vidéos) -->
@@ -272,34 +294,11 @@
           <label>Nom *</label>
           <input type="text" id="ingredient-nom" required>
         </div>
-        <div class="form-group">
-          <label>Unité de base</label>
-          <select id="ingredient-unite"></select>
-        </div>
-        <div class="form-group">
-          <label>Catégorie</label>
-          <select id="ingredient-categorie"></select>
-        </div>
         <div class="form-actions">
           <button type="submit" class="btn-primary">💾 Enregistrer</button>
           <button type="button" class="btn-secondary modal-close">Annuler</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- Modal Gestion des Catégories -->
-  <div class="modal" id="modal-categories">
-    <div class="modal-content">
-      <span class="modal-close">&times;</span>
-      <h2>📂 Gérer les catégories</h2>
-      <div style="margin-bottom: 1.5rem;">
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-          <input type="text" id="new-category-name" placeholder="Nouvelle catégorie..." class="search-input" style="flex: 1;">
-          <button type="button" class="btn-primary" id="btn-add-category">➕ Ajouter</button>
-        </div>
-      </div>
-      <div id="categories-list" style="max-height: 400px; overflow-y: auto;"></div>
     </div>
   </div>
 
@@ -317,8 +316,13 @@
         </div>
 
         <div class="form-group">
-          <label>Recette *</label>
-          <input type="text" id="menu-search" placeholder="Rechercher une recette..." class="search-input" autocomplete="off">
+          <label for="menu-components-search">Ingrédients principaux</label>
+          <input type="text" id="menu-components-search" placeholder="Ex: pomme de terre, haricot..." class="search-input" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="menu-search">Nom du plat *</label>
+          <input type="text" id="menu-search" placeholder="Choisir parmi les plats proposés..." class="search-input" autocomplete="off">
           <div id="menu-recettes-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); margin-top: 0.5rem; display: none;"></div>
           <div id="menu-selected-plat" style="margin-top: 0.5rem;"></div>
         </div>
