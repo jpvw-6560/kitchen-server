@@ -2297,8 +2297,8 @@ async function openMenuModal(dateStr, jour, platId = null, nbPersonnes = 2, note
   
   modal.classList.add('active');
   
-  // Focus sur le champ de recherche
-  setTimeout(() => document.getElementById("menu-components-search").focus(), 100);
+  // Focus sur le nom du plat
+  setTimeout(() => document.getElementById("menu-search").focus(), 100);
 }
 
 function matchesMainComponents(plat, query) {

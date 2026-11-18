@@ -4,6 +4,9 @@
 module.exports = {
   // Port du serveur
   port: process.env.PORT || 3002,
+
+  // Interface réseau d'écoute
+  host: process.env.HOST || '0.0.0.0',
   
   // Dossier d'upload
   uploadDir: process.env.UPLOAD_DIR || './uploads',

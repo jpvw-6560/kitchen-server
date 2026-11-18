@@ -84,10 +84,16 @@ ss -tlnp | grep :3002
 Si vous utilisez Tailscale (VPN mesh) :
 
 ```
-http://[TAILSCALE-IP]:3002
+https://[NOM-TAILSCALE].tail[ID].ts.net:3002
 ```
 
-Exemple : `http://100.64.1.5:3002`
+Pour un déploiement Docker avec `network_mode: host` et Tailscale Serve sur le même port, le serveur doit écouter sur `127.0.0.1` afin d'éviter le conflit de port :
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.host-network.yml up -d --build
+```
+
+Cette surcharge ne s'applique qu'au déploiement en réseau hôte. Le compose standard continue d'écouter sur toutes les interfaces pour l'accès LAN.
 
 ## ❓ Dépannage
 
